@@ -12,7 +12,13 @@ import {
 } from "react-native";
 import * as ImagePickerExpo from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
-import * as Sharing from "expo-sharing";
+import { Platform } from "react-native";
+import {
+    getFileInfo,
+    getFileExtension,
+    getMimeType,
+    shareImage as platformShareImage,
+} from "../utils/platformUtils";
 import axios from "axios";
 
 // Change this to your computer's IP address when testing on a physical device
@@ -96,15 +102,24 @@ export default function HomeScreen({ navigation, route }) {
         try {
             // Create form data
             const formData = new FormData();
-            const fileInfo = await FileSystem.getInfoAsync(sketch);
 
-            // Get file extension
-            const fileExtension = sketch.split(".").pop();
-            const mimeType =
-                fileExtension === "png" ? "image/png" : "image/jpeg";
+            // Get file info in a platform-compatible way
+            const fileInfo = await getFileInfo(sketch);
+
+            // Get file extension in a platform-compatible way
+            const fileExtension = getFileExtension(sketch);
+            const mimeType = getMimeType(fileExtension);
+
+            // Handle data URIs for web platform
+            let fileUri = sketch;
+            if (Platform.OS === "web" && sketch.startsWith("data:")) {
+                // For data URIs on web, we need to handle them differently
+                // The URI is already in the correct format for the FormData
+                fileUri = sketch;
+            }
 
             formData.append("sketch", {
-                uri: sketch,
+                uri: fileUri,
                 name: `sketch.${fileExtension}`,
                 type: mimeType,
             });
@@ -143,19 +158,11 @@ export default function HomeScreen({ navigation, route }) {
         }
 
         try {
-            // Save base64 image to temporary file
+            // Extract base64 data from the data URI
             const base64Data = convertedArt.split(",")[1];
-            const tempFilePath =
-                FileSystem.cacheDirectory + "converted_art.png";
-            await FileSystem.writeAsStringAsync(tempFilePath, base64Data, {
-                encoding: FileSystem.EncodingType.Base64,
-            });
 
-            // Share the file
-            await Sharing.shareAsync(tempFilePath, {
-                mimeType: "image/png",
-                dialogTitle: "Share your converted art",
-            });
+            // Use our platform-specific sharing function
+            await platformShareImage(convertedArt, base64Data);
         } catch (error) {
             console.error("Error sharing image:", error);
             Alert.alert("Error", "Failed to share image");
@@ -229,13 +236,12 @@ export default function HomeScreen({ navigation, route }) {
 
     // Indian Miniature (intricate Mughal-era details)
 
-
     const styleOptions = [
-               "Cyberpunk Neon",
+        "Cyberpunk Neon",
         "Anime",
         "Watercolor Wash",
-         "Retro Pixel Art",
-"Van Gogh Oil Painting",
+        "Retro Pixel Art",
+        "Van Gogh Oil Painting",
         "Charcoal Sketch",
         "Impressionist",
         "Pointillism",
@@ -255,7 +261,7 @@ export default function HomeScreen({ navigation, route }) {
         "Minimalism",
         "Expressionism",
         "Hyperrealism",
-];
+    ];
 
     return (
         <ScrollView contentContainerStyle={styles.scrollContainer}>
