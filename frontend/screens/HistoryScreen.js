@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
     StyleSheet,
     Text,
@@ -25,7 +26,9 @@ export default function HistoryScreen({ navigation }) {
     const fetchHistory = async () => {
         try {
             setLoading(true);
+            console.log("Fetching history from:", `${API_URL}/history`);
             const response = await axios.get(`${API_URL}/history`);
+            console.log("History data received:", response.data);
             setHistory(response.data);
         } catch (error) {
             console.error("Error fetching history:", error);
@@ -36,9 +39,22 @@ export default function HistoryScreen({ navigation }) {
         }
     };
 
+    // Fetch history when component mounts
     useEffect(() => {
         fetchHistory();
     }, []);
+
+    // Fetch history when screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            console.log("History screen focused - refreshing data");
+            fetchHistory();
+            return () => {
+                // Cleanup function when screen loses focus (optional)
+                console.log("History screen unfocused");
+            };
+        }, [])
+    );
 
     const handleRefresh = () => {
         setRefreshing(true);
@@ -47,6 +63,7 @@ export default function HistoryScreen({ navigation }) {
 
     const deleteHistoryItem = async (id) => {
         try {
+            console.log("Deleting history item with ID:", id);
             await axios.delete(`${API_URL}/history/${id}`);
             setHistory(history.filter((item) => item._id !== id));
             Alert.alert("Success", "History item deleted successfully");
