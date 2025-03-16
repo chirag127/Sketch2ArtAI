@@ -4,7 +4,13 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { promisify } = require("util");
 require("dotenv").config();
+
+// Promisify fs functions
+const readdir = promisify(fs.readdir);
+const stat = promisify(fs.stat);
+const unlink = promisify(fs.unlink);
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -94,7 +100,7 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
         const result = await chatSession.sendMessage(
             `Convert this sketch into ${style} style art`
         );
-        console.log(result);
+        // console.log(result);
 
         // Extract the image data
         const inlineData =
@@ -121,6 +127,61 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
         console.error("Error processing sketch:", error);
         res.status(500).json({
             error: "Failed to process sketch",
+            details: error.message ,
+        });
+    }
+});
+
+// Function to clean up old files
+async function cleanupOldFiles(directory, maxAgeMs = 1 * 60 * 60 * 1000) {
+    // Default: 1 hour
+    try {
+        // Create directory if it doesn't exist
+        if (!fs.existsSync(directory)) {
+            fs.mkdirSync(directory, { recursive: true });
+            console.log(`Created directory: ${directory}`);
+            return;
+        }
+
+        const now = Date.now();
+        const files = await readdir(directory);
+
+        for (const file of files) {
+            const filePath = path.join(directory, file);
+            const fileStat = await stat(filePath);
+
+            // Skip directories
+            if (fileStat.isDirectory()) continue;
+
+            // Check if file is older than maxAgeMs
+            if (now - fileStat.mtimeMs > maxAgeMs) {
+                await unlink(filePath);
+                console.log(`Deleted old file: ${filePath}`);
+            }
+        }
+        console.log(`Cleanup completed for ${directory}`);
+    } catch (error) {
+        console.error(`Error cleaning up ${directory}:`, error);
+    }
+}
+
+// Endpoint to manually trigger cleanup
+app.post("/api/cleanup", async (req, res) => {
+    try {
+        const uploadsDir = path.join(__dirname, "uploads");
+        const outputsDir = path.join(__dirname, "outputs");
+
+        await cleanupOldFiles(uploadsDir, 0); // Delete all files
+        await cleanupOldFiles(outputsDir, 0); // Delete all files
+
+        res.json({
+            success: true,
+            message: "All files cleaned up successfully",
+        });
+    } catch (error) {
+        console.error("Error during manual cleanup:", error);
+        res.status(500).json({
+            error: "Failed to clean up files",
             details: error.message,
         });
     }
@@ -132,4 +193,17 @@ app.use("/outputs", express.static(path.join(__dirname, "outputs")));
 // Start the server
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
+
+    // Initial cleanup
+    const uploadsDir = path.join(__dirname, "uploads");
+    const outputsDir = path.join(__dirname, "outputs");
+
+    cleanupOldFiles(uploadsDir);
+    cleanupOldFiles(outputsDir);
+
+    // Schedule periodic cleanup (every 30 minutes)
+    setInterval(() => {
+        cleanupOldFiles(uploadsDir);
+        cleanupOldFiles(outputsDir);
+    }, 30 * 60 * 1000); // 30 minutes
 });

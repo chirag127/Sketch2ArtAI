@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     StyleSheet,
     Text,
@@ -19,11 +19,21 @@ import axios from "axios";
 
 import { API_URL } from "../env";
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation, route }) {
     const [sketch, setSketch] = useState(null);
     const [convertedArt, setConvertedArt] = useState(null);
     const [loading, setLoading] = useState(false);
     const [style, setStyle] = useState("Anime");
+
+    // Handle sketch from Canvas screen
+    useEffect(() => {
+        if (route.params?.sketchUri) {
+            setSketch(route.params.sketchUri);
+            setConvertedArt(null);
+            // Clear the route params to avoid setting the sketch again on re-render
+            navigation.setParams({ sketchUri: undefined });
+        }
+    }, [route.params?.sketchUri]);
 
     const pickImage = async () => {
         try {
@@ -145,6 +155,31 @@ export default function HomeScreen() {
         }
     };
 
+    const cleanupFiles = async () => {
+        try {
+            setLoading(true);
+            // Get the base URL from the API_URL
+            const baseUrl = API_URL.substring(0, API_URL.lastIndexOf("/"));
+            const cleanupUrl = `${baseUrl}/cleanup`;
+
+            const response = await axios.post(cleanupUrl);
+
+            if (response.data && response.data.success) {
+                Alert.alert(
+                    "Success",
+                    "Temporary files cleaned up successfully"
+                );
+            } else {
+                Alert.alert("Error", "Failed to clean up temporary files");
+            }
+        } catch (error) {
+            console.error("Error cleaning up files:", error);
+            Alert.alert("Error", "Failed to clean up temporary files");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const styleOptions = [
         "Anime",
         "Watercolor",
@@ -179,6 +214,12 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.button} onPress={takePhoto}>
                         <Text style={styles.buttonText}>Take Photo</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.button, styles.drawButton]}
+                        onPress={() => navigation.navigate("Canvas")}
+                    >
+                        <Text style={styles.buttonText}>Draw Sketch</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -244,6 +285,15 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                     </>
                 )}
+
+                <TouchableOpacity
+                    style={styles.cleanupButton}
+                    onPress={cleanupFiles}
+                >
+                    <Text style={styles.cleanupButtonText}>
+                        Clean Up Temporary Files
+                    </Text>
+                </TouchableOpacity>
             </View>
         </ScrollView>
     );
@@ -294,6 +344,7 @@ const styles = StyleSheet.create({
     },
     buttonContainer: {
         flexDirection: "row",
+        flexWrap: "wrap",
         justifyContent: "space-around",
         marginBottom: 30,
     },
@@ -303,6 +354,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 30,
         borderRadius: 25,
         elevation: 3,
+        margin: 5,
+    },
+    drawButton: {
+        backgroundColor: "#9c27b0",
     },
     buttonText: {
         color: "white",
@@ -362,6 +417,20 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     shareButtonText: {
+        color: "white",
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    cleanupButton: {
+        backgroundColor: "#d9534f",
+        paddingVertical: 12,
+        borderRadius: 25,
+        alignItems: "center",
+        marginTop: 30,
+        marginBottom: 20,
+        elevation: 3,
+    },
+    cleanupButtonText: {
         color: "white",
         fontSize: 16,
         fontWeight: "600",

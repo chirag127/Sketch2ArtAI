@@ -1,14 +1,30 @@
 import React from "react";
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaView, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "./screens/HomeScreen";
+import CanvasScreen from "./screens/CanvasScreen";
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
     return (
-        <SafeAreaView style={styles.container}>
+        <NavigationContainer>
             <StatusBar style="auto" />
-            <HomeScreen />
-        </SafeAreaView>
+            <Stack.Navigator initialRouteName="Home">
+                <Stack.Screen
+                    name="Home"
+                    component={HomeScreen}
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="Canvas"
+                    component={CanvasScreen}
+                    options={{ headerShown: false }}
+                />
+            </Stack.Navigator>
+        </NavigationContainer>
     );
 }
 
