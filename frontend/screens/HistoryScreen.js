@@ -26,9 +26,9 @@ export default function HistoryScreen({ navigation }) {
     const fetchHistory = async () => {
         try {
             setLoading(true);
-            console.log("Fetching history from:", `${API_URL}/history`);
+            // console.log("Fetching history from:", `${API_URL}/history`);
             const response = await axios.get(`${API_URL}/history`);
-            console.log("History data received:", response.data);
+            // console.log("History data received:", response.data);
             setHistory(response.data);
         } catch (error) {
             console.error("Error fetching history:", error);
