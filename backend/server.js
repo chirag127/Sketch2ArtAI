@@ -60,6 +60,7 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
         const filePath = req.file.path;
         const mimeType = req.file.mimetype;
         const style = req.body.style || "Anime"; // Default style is Anime
+        const customPrompt = req.body.customPrompt || ""; // Get custom prompt if provided
 
         // Read file as base64
         const fileBase64 = await readFileAsBase64(filePath);
@@ -97,9 +98,16 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
         });
 
         // Send message to convert sketch
-        const result = await chatSession.sendMessage(
-            `Convert this sketch into ${style} style art`
-        );
+        let promptMessage = `Convert this sketch into ${style} style art`;
+
+        // Add custom prompt if provided
+        if (customPrompt) {
+            promptMessage = `${promptMessage}. Additional instructions: ${customPrompt}`;
+        }
+
+        console.log("Sending prompt to AI:", promptMessage);
+
+        const result = await chatSession.sendMessage(promptMessage);
         // console.log(result);
 
         try {
@@ -109,9 +117,9 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
         }
         let inlineData;
         try {
-        // Extract the image data
-        inlineData =
-            result.response.candidates[0].content.parts[0].inlineData;
+            // Extract the image data
+            inlineData =
+                result.response.candidates[0].content.parts[0].inlineData;
         } catch (error) {
             console.error("Error extracting inlineData:", error);
             return res.status(500).json({
@@ -142,7 +150,7 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
         console.error("Error processing sketch:", error);
         res.status(500).json({
             error: "Failed to process sketch",
-            details: error.message ,
+            details: error.message,
         });
     }
 });

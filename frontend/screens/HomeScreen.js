@@ -8,6 +8,7 @@ import {
     ActivityIndicator,
     ScrollView,
     Alert,
+    TextInput,
 } from "react-native";
 import * as ImagePickerExpo from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
@@ -15,7 +16,7 @@ import * as Sharing from "expo-sharing";
 import axios from "axios";
 
 // Change this to your computer's IP address when testing on a physical device
-// const API_URL = "http://10.0.2.2:5000/api/convert"; // 10.0.2.2 is the special IP for Android emulator to access host
+// const API_URL = "http://10.0.2.2:5000/api"; // 10.0.2.2 is the special IP for Android emulator to access host
 
 import { API_URL } from "../env";
 
@@ -24,6 +25,7 @@ export default function HomeScreen({ navigation, route }) {
     const [convertedArt, setConvertedArt] = useState(null);
     const [loading, setLoading] = useState(false);
     const [style, setStyle] = useState("Anime");
+    const [customPrompt, setCustomPrompt] = useState("");
 
     // Handle sketch from Canvas screen
     useEffect(() => {
@@ -108,6 +110,11 @@ export default function HomeScreen({ navigation, route }) {
             });
 
             formData.append("style", style);
+
+            // Add custom prompt if provided
+            if (customPrompt.trim()) {
+                formData.append("customPrompt", customPrompt.trim());
+            }
 
             // Send to backend
             const response = await axios.post(API_URL + "/convert", formData, {
@@ -251,6 +258,21 @@ export default function HomeScreen({ navigation, route }) {
                     ))}
                 </ScrollView>
 
+                <Text style={styles.sectionTitle}>
+                    Custom Prompt (Optional)
+                </Text>
+                <View style={styles.customPromptContainer}>
+                    <TextInput
+                        style={styles.customPromptInput}
+                        placeholder="Enter custom instructions for the AI..."
+                        placeholderTextColor="#999"
+                        value={customPrompt}
+                        onChangeText={setCustomPrompt}
+                        multiline
+                        numberOfLines={3}
+                    />
+                </View>
+
                 <TouchableOpacity
                     style={[
                         styles.convertButton,
@@ -263,7 +285,9 @@ export default function HomeScreen({ navigation, route }) {
                         <ActivityIndicator color="#fff" />
                     ) : (
                         <Text style={styles.convertButtonText}>
-                            Convert to {style}
+                            {customPrompt.trim()
+                                ? "Convert with Custom Prompt"
+                                : `Convert to ${style}`}
                         </Text>
                     )}
                 </TouchableOpacity>
@@ -391,6 +415,20 @@ const styles = StyleSheet.create({
     selectedStyleButtonText: {
         color: "white",
         fontWeight: "600",
+    },
+    customPromptContainer: {
+        marginBottom: 25,
+        width: "100%",
+    },
+    customPromptInput: {
+        borderWidth: 1,
+        borderColor: "#ccc",
+        borderRadius: 10,
+        padding: 12,
+        fontSize: 16,
+        backgroundColor: "#fff",
+        textAlignVertical: "top",
+        minHeight: 80,
     },
     convertButton: {
         backgroundColor: "#5cb85c",
