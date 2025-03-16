@@ -111,18 +111,33 @@ export default function HomeScreen({ navigation, route }) {
             const mimeType = getMimeType(fileExtension);
 
             // Handle data URIs for web platform
-            let fileUri = sketch;
             if (Platform.OS === "web" && sketch.startsWith("data:")) {
-                // For data URIs on web, we need to handle them differently
-                // The URI is already in the correct format for the FormData
-                fileUri = sketch;
-            }
+                try {
+                    // Extract the base64 data from the data URI
+                    const dataUriParts = sketch.split(",");
+                    const mimeMatch = dataUriParts[0].match(/:(.*?);/);
+                    const mime = mimeMatch ? mimeMatch[1] : "image/png";
+                    const base64Data = dataUriParts[1];
 
-            formData.append("sketch", {
-                uri: fileUri,
-                name: `sketch.${fileExtension}`,
-                type: mimeType,
-            });
+                    // For web, send base64 data directly
+                    formData.append("base64Data", base64Data);
+                    formData.append("mimeType", mime);
+
+                    console.log("Sending base64 data directly (web platform)");
+                } catch (error) {
+                    console.error("Error processing data URI:", error);
+                    throw new Error("Failed to process the sketch image");
+                }
+            } else {
+                // For native platforms, use the normal approach
+                formData.append("sketch", {
+                    uri: sketch,
+                    name: `sketch.${fileExtension}`,
+                    type: mimeType,
+                });
+
+                console.log("Sending file data (native platform)");
+            }
 
             formData.append("style", style);
 
@@ -130,6 +145,9 @@ export default function HomeScreen({ navigation, route }) {
             if (customPrompt.trim()) {
                 formData.append("customPrompt", customPrompt.trim());
             }
+
+            console.log("Sending request to:", API_URL + "/convert");
+            console.log("FormData keys:", [...formData.keys()]);
 
             // Send to backend
             const response = await axios.post(API_URL + "/convert", formData, {
@@ -145,7 +163,35 @@ export default function HomeScreen({ navigation, route }) {
             }
         } catch (error) {
             console.error("Error converting sketch:", error);
-            Alert.alert("Error", "Failed to convert sketch. Please try again.");
+
+            // More detailed error logging
+            if (error.response) {
+                // The request was made and the server responded with a status code
+                // that falls out of the range of 2xx
+                console.error("Error response data:", error.response.data);
+                console.error("Error response status:", error.response.status);
+
+                Alert.alert(
+                    "Error",
+                    `Failed to convert sketch: ${
+                        error.response.status
+                    } - ${JSON.stringify(error.response.data)}`
+                );
+            } else if (error.request) {
+                // The request was made but no response was received
+                console.error("Error request:", error.request);
+                Alert.alert(
+                    "Error",
+                    "No response from server. Please check your connection."
+                );
+            } else {
+                // Something happened in setting up the request that triggered an Error
+                console.error("Error message:", error.message);
+                Alert.alert(
+                    "Error",
+                    `Failed to convert sketch: ${error.message}`
+                );
+            }
         } finally {
             setLoading(false);
         }
@@ -193,48 +239,6 @@ export default function HomeScreen({ navigation, route }) {
             setLoading(false);
         }
     };
-    // Van Gogh Oil Painting (swirling textures, bold brushstrokes)
-
-    // Watercolor Wash (soft, translucent layers)
-
-    // Charcoal Sketch (high-contrast, gritty textures)
-
-    // Impressionist (light-focused, blended colors)
-
-    // Pointillism (stippled dots creating images)
-
-    // Modern & Pop Culture
-    // Cyberpunk Neon (glowing futuristic cityscapes)
-
-    // Anime/Cel-Shaded (vibrant, clean-lined characters)
-
-    // Glitch Art (digital distortion, RGB splits)
-
-    // Retro Pixel Art (8-bit/16-bit game aesthetics)
-
-    // Pop Art (Warhol-style bold colors, halftones)
-
-    // Thematic & Fantasy
-    // Steampunk Machinery (gears, brass, Victorian tech)
-
-    // Fantasy RPG (magic runes, epic landscapes)
-
-    // Gothic Horror (haunted shadows, eerie fog)
-
-    // Sci-Fi Alien (bioluminescent textures, alien flora)
-
-    // Surrealism (dreamlike, impossible landscapes)
-
-    // Cultural & Historical
-    // Japanese Ukiyo-e (woodblock prints, e.g., Hokusai waves)
-
-    // Renaissance Fresco (cracked murals, gold accents)
-
-    // Aztec Carvings (geometric patterns, tribal motifs)
-
-    // Art Deco (symmetrical, metallic elegance)
-
-    // Indian Miniature (intricate Mughal-era details)
 
     const styleOptions = [
         "Cyberpunk Neon",

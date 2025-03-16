@@ -1,0 +1,9 @@
+{
+    "name": "sketch2artai-netlify",
+    "version": "1.0.0",
+    "description": "Netlify build configuration for Sketch2ArtAI",
+    "scripts": {
+        "build": "bash ./netlify-build.sh"
+    },
+    "dependencies": {}
+}

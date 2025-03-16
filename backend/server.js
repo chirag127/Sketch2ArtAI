@@ -63,8 +63,11 @@ async function readFileAsBase64(filePath) {
 app.post("/api/convert", upload.single("sketch"), async (req, res) => {
     try {
         console.log("Received convert request");
-        console.log("Request body:", req.body);
+        console.log("Request body keys:", Object.keys(req.body));
         console.log("Request file:", req.file ? "File received" : "No file");
+        console.log("Has base64Data:", req.body.base64Data ? "Yes" : "No");
+        console.log("Has mimeType:", req.body.mimeType ? "Yes" : "No");
+        console.log("Has style:", req.body.style ? "Yes" : "No");
 
         // Enable CORS for web clients
         res.header("Access-Control-Allow-Origin", "*");
@@ -77,9 +80,12 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
         let mimeType;
 
         if (!req.file && !req.body.base64Data) {
-            return res
-                .status(400)
-                .json({ error: "No file or base64 data uploaded" });
+            console.error("Error: No file or base64 data provided");
+            return res.status(400).json({
+                error: "No file or base64 data uploaded",
+                receivedKeys: Object.keys(req.body),
+                fileReceived: !!req.file,
+            });
         }
 
         // Get style and custom prompt
@@ -95,8 +101,16 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
             fileBase64 = await readFileAsBase64(filePath);
         } else if (req.body.base64Data) {
             // Handle base64 data directly (from web platform)
+            console.log("Using base64 data from request body");
             fileBase64 = req.body.base64Data;
             mimeType = req.body.mimeType || "image/png";
+            console.log("Base64 data length:", fileBase64.length);
+            console.log("Using mime type:", mimeType);
+        } else {
+            console.error(
+                "Error: Unexpected state - no file and no base64Data but passed initial check"
+            );
+            return res.status(400).json({ error: "Invalid request format" });
         }
 
         // Set up the model

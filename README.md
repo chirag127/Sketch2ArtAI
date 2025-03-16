@@ -1,18 +1,42 @@
 # Sketch2ArtAI
 
 A React Native application that converts sketches to artistic images using Google's Generative AI (Gemini).
-## deploying the app
 
-1. on expo
+## Deploying the App
 
-`eas build -p android --profile preview`
+### Android/iOS Deployment
 
-2. web https://docs.expo.dev/guides/publishing-websites/
+1. Build for Android:
 
-npx expo export -p web
-netlify deploy --prod --dir dist
-netlify deploy --dir dist
+    ```
+    cd frontend
+    eas build -p android --profile preview
+    ```
 
+2. Build for iOS (requires Apple Developer account):
+    ```
+    cd frontend
+    eas build -p ios --profile preview
+    ```
+
+### Web Deployment
+
+1. Build the web version:
+
+    ```
+    npm run build
+    ```
+
+    This will create a web-build directory in the frontend folder.
+
+2. Deploy to Netlify:
+
+    ```
+    # If using Netlify CLI
+    netlify deploy --prod --dir frontend/web-build
+    ```
+
+    Alternatively, connect your GitHub repository to Netlify and it will automatically deploy using the netlify.toml configuration.
 
 ## Features
 
