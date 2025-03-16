@@ -24,7 +24,12 @@ A React Native application that converts sketches to artistic images using Googl
 1. Build the web version:
 
     ```
-    npm run build
+2. web https://docs.expo.dev/guides/publishing-websites/
+
+npx expo export -p web
+netlify deploy --prod --dir dist
+netlify deploy --dir dist
+
     ```
 
     This will create a web-build directory in the frontend folder.
