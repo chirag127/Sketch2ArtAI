@@ -166,7 +166,7 @@ export default function HomeScreen({ navigation, route }) {
         try {
             setLoading(true);
             // Get the base URL from the API_URL
-            const baseUrl = API_URL.substring(0, API_URL.lastIndexOf("/"));
+            const baseUrl = API_URL;
             const cleanupUrl = `${baseUrl}/cleanup`;
 
             const response = await axios.post(cleanupUrl);
@@ -186,14 +186,76 @@ export default function HomeScreen({ navigation, route }) {
             setLoading(false);
         }
     };
+    // Van Gogh Oil Painting (swirling textures, bold brushstrokes)
+
+    // Watercolor Wash (soft, translucent layers)
+
+    // Charcoal Sketch (high-contrast, gritty textures)
+
+    // Impressionist (light-focused, blended colors)
+
+    // Pointillism (stippled dots creating images)
+
+    // Modern & Pop Culture
+    // Cyberpunk Neon (glowing futuristic cityscapes)
+
+    // Anime/Cel-Shaded (vibrant, clean-lined characters)
+
+    // Glitch Art (digital distortion, RGB splits)
+
+    // Retro Pixel Art (8-bit/16-bit game aesthetics)
+
+    // Pop Art (Warhol-style bold colors, halftones)
+
+    // Thematic & Fantasy
+    // Steampunk Machinery (gears, brass, Victorian tech)
+
+    // Fantasy RPG (magic runes, epic landscapes)
+
+    // Gothic Horror (haunted shadows, eerie fog)
+
+    // Sci-Fi Alien (bioluminescent textures, alien flora)
+
+    // Surrealism (dreamlike, impossible landscapes)
+
+    // Cultural & Historical
+    // Japanese Ukiyo-e (woodblock prints, e.g., Hokusai waves)
+
+    // Renaissance Fresco (cracked murals, gold accents)
+
+    // Aztec Carvings (geometric patterns, tribal motifs)
+
+    // Art Deco (symmetrical, metallic elegance)
+
+    // Indian Miniature (intricate Mughal-era details)
+
 
     const styleOptions = [
+               "Cyberpunk Neon",
         "Anime",
-        "Watercolor",
-        "Oil Painting",
-        "Sketch",
-        "Digital Art",
-    ];
+        "Watercolor Wash",
+         "Retro Pixel Art",
+"Van Gogh Oil Painting",
+        "Charcoal Sketch",
+        "Impressionist",
+        "Pointillism",
+        "Glitch Art",
+        "Pop Art",
+        "Steampunk Machinery",
+        "Fantasy RPG",
+        "Gothic Horror",
+        "Sci-Fi Alien",
+        "Surrealism",
+        "Japanese Ukiyo-e",
+        "Renaissance Fresco",
+        "Aztec Carvings",
+        "Art Deco",
+        "Indian Miniature",
+        "Modern Abstract",
+        "Minimalism",
+        "Expressionism",
+        "Hyperrealism",
+];
 
     return (
         <ScrollView contentContainerStyle={styles.scrollContainer}>

@@ -1,6 +1,18 @@
 # Sketch2ArtAI
 
 A React Native application that converts sketches to artistic images using Google's Generative AI (Gemini).
+## deploying the app
+
+1. on expo
+
+`eas build -p android --profile preview`
+
+2. web https://docs.expo.dev/guides/publishing-websites/
+
+npx expo export -p web
+netlify deploy --prod --dir dist
+netlify deploy --dir dist
+
 
 ## Features
 

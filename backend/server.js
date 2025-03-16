@@ -102,7 +102,7 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
 
         // Add custom prompt if provided
         if (customPrompt) {
-            promptMessage = `${promptMessage}. Additional instructions: ${customPrompt}`;
+            promptMessage = ` ${customPrompt}`;
         }
 
         console.log("Sending prompt to AI:", promptMessage);

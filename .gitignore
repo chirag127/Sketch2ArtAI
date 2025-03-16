@@ -138,3 +138,6 @@ backend/outputs/
 backend/uploads/
 package.json
 package-lock.json
+
+# Local Netlify folder
+.netlify
