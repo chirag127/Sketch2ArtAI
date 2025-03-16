@@ -62,9 +62,9 @@ async function readFileAsBase64(filePath) {
 // API endpoint for sketch to art conversion
 app.post("/api/convert", upload.single("sketch"), async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ error: "No file uploaded" });
-        }
+        console.log("Received convert request");
+        console.log("Request body:", req.body);
+        console.log("Request file:", req.file ? "File received" : "No file");
 
         // Enable CORS for web clients
         res.header("Access-Control-Allow-Origin", "*");
@@ -73,13 +73,31 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
             "Origin, X-Requested-With, Content-Type, Accept"
         );
 
-        const filePath = req.file.path;
-        const mimeType = req.file.mimetype;
+        let fileBase64;
+        let mimeType;
+
+        if (!req.file && !req.body.base64Data) {
+            return res
+                .status(400)
+                .json({ error: "No file or base64 data uploaded" });
+        }
+
+        // Get style and custom prompt
         const style = req.body.style || "Anime"; // Default style is Anime
         const customPrompt = req.body.customPrompt || ""; // Get custom prompt if provided
 
-        // Read file as base64
-        const fileBase64 = await readFileAsBase64(filePath);
+        if (req.file) {
+            // Handle file upload (from native platforms)
+            const filePath = req.file.path;
+            mimeType = req.file.mimetype;
+
+            // Read file as base64
+            fileBase64 = await readFileAsBase64(filePath);
+        } else if (req.body.base64Data) {
+            // Handle base64 data directly (from web platform)
+            fileBase64 = req.body.base64Data;
+            mimeType = req.body.mimeType || "image/png";
+        }
 
         // Set up the model
         const model = genAI.getGenerativeModel({

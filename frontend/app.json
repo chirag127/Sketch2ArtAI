@@ -29,19 +29,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ],
       "package": "com.chirag127.Sketch2ArtAI"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "ec91ac5d-56a3-4abe-9b49-5b8909654cdc"
-      }
-    },
-    "owner": "chirag127"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    }
   }
 }

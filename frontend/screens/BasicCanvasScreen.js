@@ -7,6 +7,7 @@ import {
     Dimensions,
     Alert,
     ActivityIndicator,
+    ScrollView,
     PanResponder,
 } from "react-native";
 import { Svg, Path } from "react-native-svg";
