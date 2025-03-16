@@ -5,12 +5,23 @@ const fs = require("fs");
 const path = require("path");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { promisify } = require("util");
+const mongoose = require("mongoose");
+const { uploadToFreeImageHost } = require("./utils/imageUpload");
 require("dotenv").config();
+
+// Import models
+const ImageHistory = require("./models/ImageHistory");
 
 // Promisify fs functions
 const readdir = promisify(fs.readdir);
 const stat = promisify(fs.stat);
 const unlink = promisify(fs.unlink);
+
+// Connect to MongoDB
+mongoose
+    .connect(process.env.MONGODB_URI)
+    .then(() => console.log("Connected to MongoDB"))
+    .catch((err) => console.error("MongoDB connection error:", err));
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -287,11 +298,40 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
             responseText = "No text response available";
         }
 
+        // Upload images to free image host
+        let originalImageUrl = "";
+        let convertedImageUrl = "";
+
+        try {
+            console.log("Uploading original sketch to image host...");
+            originalImageUrl = await uploadToFreeImageHost(fileBase64);
+
+            console.log("Uploading converted art to image host...");
+            convertedImageUrl = await uploadToFreeImageHost(imageData);
+
+            // Save to database
+            const historyItem = new ImageHistory({
+                originalImageUrl,
+                convertedImageUrl,
+                style,
+                prompt: customPrompt || "",
+                responseText,
+            });
+
+            await historyItem.save();
+            console.log("Saved to history database with ID:", historyItem._id);
+        } catch (uploadError) {
+            console.error("Error uploading images:", uploadError);
+            // Continue even if upload fails
+        }
+
         // Return the image data and text to the client
         res.json({
             success: true,
             imageData: `data:${inlineData.mimeType};base64,${imageData}`,
             responseText: responseText,
+            originalImageUrl,
+            convertedImageUrl,
             message: "Sketch converted successfully",
         });
     } catch (error) {
@@ -375,6 +415,40 @@ app.post("/api/cleanup", cors(), async (req, res) => {
         console.error("Error during manual cleanup:", error);
         res.status(500).json({
             error: "Failed to clean up files",
+            details: error.message,
+        });
+    }
+});
+
+// API endpoint to get image history
+app.get("/api/history", async (req, res) => {
+    try {
+        const history = await ImageHistory.find()
+            .sort({ createdAt: -1 })
+            .limit(20);
+        res.json(history);
+    } catch (error) {
+        console.error("Error fetching history:", error);
+        res.status(500).json({
+            error: "Failed to fetch history",
+            details: error.message,
+        });
+    }
+});
+
+// API endpoint to delete a history item
+app.delete("/api/history/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        await ImageHistory.findByIdAndDelete(id);
+        res.json({
+            success: true,
+            message: "History item deleted successfully",
+        });
+    } catch (error) {
+        console.error("Error deleting history item:", error);
+        res.status(500).json({
+            error: "Failed to delete history item",
             details: error.message,
         });
     }

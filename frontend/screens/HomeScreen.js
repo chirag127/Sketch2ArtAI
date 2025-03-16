@@ -34,6 +34,8 @@ export default function HomeScreen({ navigation, route }) {
     const [style, setStyle] = useState("Anime");
     const [customPrompt, setCustomPrompt] = useState("");
     const [responseText, setResponseText] = useState("");
+    const [convertedImageUrl, setConvertedImageUrl] = useState("");
+    const [originalImageUrl, setOriginalImageUrl] = useState("");
 
     // Handle sketch from Canvas screen
     useEffect(() => {
@@ -167,6 +169,22 @@ export default function HomeScreen({ navigation, route }) {
                 } else {
                     setResponseText("");
                 }
+
+                // Store the image URLs if available
+                if (response.data.originalImageUrl) {
+                    console.log(
+                        "Original image URL:",
+                        response.data.originalImageUrl
+                    );
+                    setOriginalImageUrl(response.data.originalImageUrl);
+                }
+                if (response.data.convertedImageUrl) {
+                    console.log(
+                        "Converted image URL:",
+                        response.data.convertedImageUrl
+                    );
+                    setConvertedImageUrl(response.data.convertedImageUrl);
+                }
             } else {
                 Alert.alert("Error", "Failed to convert sketch");
                 setResponseText("");
@@ -207,6 +225,26 @@ export default function HomeScreen({ navigation, route }) {
         }
     };
 
+    const downloadImage = async (url, filename) => {
+        if (Platform.OS === "web") {
+            // For web, open the image in a new tab
+            window.open(url, "_blank");
+            return;
+        }
+
+        try {
+            const localUri = FileSystem.documentDirectory + filename;
+            const { uri } = await FileSystem.downloadAsync(url, localUri);
+
+            Alert.alert("Success", `Image saved to ${uri}`);
+            return uri;
+        } catch (error) {
+            console.error("Error downloading image:", error);
+            Alert.alert("Error", "Failed to download image");
+            return null;
+        }
+    };
+
     const shareImage = async () => {
         if (!convertedArt) {
             Alert.alert("No image", "Please convert a sketch first");
@@ -214,19 +252,52 @@ export default function HomeScreen({ navigation, route }) {
         }
 
         try {
-            // Extract base64 data from the data URI
-            const base64Data = convertedArt.split(",")[1];
+            // If we have a hosted URL, use that for sharing
+            if (convertedImageUrl) {
+                // Prepare share content with image and text
+                let shareContent = "Generated with Sketch2ArtAI";
 
-            // Prepare share content with image and text
-            let shareContent = "Generated with Sketch2ArtAI";
+                // Add the response text if available
+                if (responseText) {
+                    shareContent += "\n\n" + responseText;
+                }
 
-            // Add the response text if available
-            if (responseText) {
-                shareContent += "\n\n" + responseText;
+                if (Platform.OS === "web") {
+                    window.open(convertedImageUrl, "_blank");
+                } else {
+                    // For native platforms, download and share
+                    const filename = `sketch2art_${Date.now()}.png`;
+                    const uri = await downloadImage(
+                        convertedImageUrl,
+                        filename
+                    );
+
+                    if (uri) {
+                        await Share.share({
+                            url: uri,
+                            message: shareContent,
+                        });
+                    }
+                }
+            } else {
+                // Fallback to the old method if no URL is available
+                const base64Data = convertedArt.split(",")[1];
+
+                // Prepare share content with image and text
+                let shareContent = "Generated with Sketch2ArtAI";
+
+                // Add the response text if available
+                if (responseText) {
+                    shareContent += "\n\n" + responseText;
+                }
+
+                // Use our platform-specific sharing function
+                await platformShareImage(
+                    convertedArt,
+                    base64Data,
+                    shareContent
+                );
             }
-
-            // Use our platform-specific sharing function
-            await platformShareImage(convertedArt, base64Data, shareContent);
         } catch (error) {
             console.error("Error sharing image:", error);
             Alert.alert("Error", "Failed to share image");
