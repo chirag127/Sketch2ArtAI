@@ -242,12 +242,12 @@ export default function HomeScreen({ navigation, route }) {
 
     const styleOptions = [
         "Cyberpunk Neon",
-        "Anime",
         "Watercolor Wash",
         "Retro Pixel Art",
         "Van Gogh Oil Painting",
         "Charcoal Sketch",
         "Impressionist",
+        "Anime",
         "Pointillism",
         "Glitch Art",
         "Pop Art",

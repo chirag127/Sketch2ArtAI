@@ -114,18 +114,46 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
         }
 
         // Set up the model
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash-exp-image-generation",
-        });
+        console.log("Setting up Gemini model...");
+
+        // Try different model names if one fails
+        let model;
+        try {
+            model = genAI.getGenerativeModel({
+                model: "gemini-2.0-flash-exp-image-generation",
+            });
+            console.log("Using model: gemini-2.0-flash-exp-image-generation");
+        } catch (error) {
+            console.error(
+                "Error with primary model, trying fallback:",
+                error.message
+            );
+            try {
+                model = genAI.getGenerativeModel({
+                    model: "gemini-1.5-flash",
+                });
+                console.log("Using fallback model: gemini-1.5-flash");
+            } catch (fallbackError) {
+                console.error(
+                    "Error with fallback model:",
+                    fallbackError.message
+                );
+                throw new Error(
+                    `Failed to initialize Gemini model: ${error.message}`
+                );
+            }
+        }
 
         const generationConfig = {
-            temperature: 1,
+            temperature: 0.9,
             topP: 0.95,
             topK: 40,
             maxOutputTokens: 8192,
             response_modalities: ["text", "image"],
             responseMimeType: "text/plain",
         };
+
+        console.log("Generation config:", generationConfig);
 
         // Start chat session
         const chatSession = model.startChat({
@@ -155,24 +183,85 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
 
         console.log("Sending prompt to AI:", promptMessage);
 
+        console.log("Sending message to Gemini AI...");
         const result = await chatSession.sendMessage(promptMessage);
-        // console.log(result);
+
+        console.log("Received response from Gemini AI");
+        console.log("Response structure:", JSON.stringify(Object.keys(result)));
+
+        if (!result || !result.response) {
+            console.error("Error: No response from Gemini AI");
+            return res.status(500).json({
+                error: "No response from Gemini AI",
+                details: "The AI model did not return a valid response",
+            });
+        }
+
+        console.log(
+            "Response candidates:",
+            result.response.candidates ? result.response.candidates.length : 0
+        );
 
         try {
-            console.log(result.response.text());
+            console.log("Response text:", result.response.text());
         } catch (error) {
             console.error("Error logging response text:", error);
         }
+
+        // Detailed logging of the response structure
+        console.log(
+            "Response structure:",
+            JSON.stringify(
+                result.response,
+                (key, value) => {
+                    if (typeof value === "string" && value.length > 100) {
+                        return value.substring(0, 100) + "... (truncated)";
+                    }
+                    return value;
+                },
+                2
+            )
+        );
+
         let inlineData;
         try {
-            // Extract the image data
-            inlineData =
-                result.response.candidates[0].content.parts[0].inlineData;
+            // Check if we have candidates
+            if (
+                !result.response.candidates ||
+                result.response.candidates.length === 0
+            ) {
+                throw new Error("No candidates in response");
+            }
+
+            // Check if we have content
+            if (!result.response.candidates[0].content) {
+                throw new Error("No content in first candidate");
+            }
+
+            // Check if we have parts
+            if (
+                !result.response.candidates[0].content.parts ||
+                result.response.candidates[0].content.parts.length === 0
+            ) {
+                throw new Error("No parts in content");
+            }
+
+            // Find the part with inlineData
+            const imagePart = result.response.candidates[0].content.parts.find(
+                (part) => part.inlineData
+            );
+
+            if (!imagePart) {
+                throw new Error("No part with inlineData found");
+            }
+
+            inlineData = imagePart.inlineData;
         } catch (error) {
             console.error("Error extracting inlineData:", error);
             return res.status(500).json({
                 error: "Failed to extract inlineData",
                 details: error.message,
+                responseStructure: JSON.stringify(result.response, null, 2),
             });
         }
 
@@ -196,9 +285,31 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
         });
     } catch (error) {
         console.error("Error processing sketch:", error);
+
+        // Check if the error is related to the Gemini API
+        if (error.message && error.message.includes("PERMISSION_DENIED")) {
+            return res.status(403).json({
+                error: "API key permission denied",
+                details:
+                    "The Gemini API key does not have permission to access the requested model or feature.",
+                message: error.message,
+            });
+        }
+
+        // Check if the error is related to invalid input
+        if (error.message && error.message.includes("INVALID_ARGUMENT")) {
+            return res.status(400).json({
+                error: "Invalid input to Gemini API",
+                details: "The input provided to the Gemini API was invalid.",
+                message: error.message,
+            });
+        }
+
+        // Generic error response
         res.status(500).json({
             error: "Failed to process sketch",
             details: error.message,
+            stack: error.stack,
         });
     }
 });
