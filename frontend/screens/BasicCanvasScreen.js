@@ -8,6 +8,7 @@ import {
     Alert,
     ActivityIndicator,
     PanResponder,
+    ScrollView,
 } from "react-native";
 import { Svg, Path } from "react-native-svg";
 import * as FileSystem from "expo-file-system";
@@ -121,114 +122,123 @@ export default function BasicCanvasScreen({ navigation }) {
     ];
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Draw Your Sketch</Text>
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+            <View style={styles.container}>
+                <Text style={styles.title}>Draw Your Sketch</Text>
 
-            <View style={styles.canvasContainer}>
-                <View
-                    ref={canvasRef}
-                    style={styles.canvas}
-                    {...panResponder.panHandlers}
-                >
-                    <Svg
-                        width={CANVAS_WIDTH}
-                        height={CANVAS_HEIGHT}
-                        style={{ backgroundColor: "#ffffff" }}
+                <View style={styles.canvasContainer}>
+                    <View
+                        ref={canvasRef}
+                        style={styles.canvas}
+                        {...panResponder.panHandlers}
                     >
-                        {/* Background rectangle to ensure the entire canvas is captured */}
-                        <Path
-                            d={`M 0,0 H ${CANVAS_WIDTH} V ${CANVAS_HEIGHT} H 0 Z`}
-                            fill="#ffffff"
-                            stroke="none"
-                        />
-
-                        {/* Render completed paths */}
-                        {paths.map((path, index) => (
+                        <Svg
+                            width={CANVAS_WIDTH}
+                            height={CANVAS_HEIGHT}
+                            style={{ backgroundColor: "#ffffff" }}
+                        >
+                            {/* Background rectangle to ensure the entire canvas is captured */}
                             <Path
-                                key={index}
-                                d={pointsToSvgPath(path.points)}
-                                stroke={path.color}
-                                strokeWidth={path.strokeWidth}
-                                fill="none"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
+                                d={`M 0,0 H ${CANVAS_WIDTH} V ${CANVAS_HEIGHT} H 0 Z`}
+                                fill="#ffffff"
+                                stroke="none"
+                            />
+
+                            {/* Render completed paths */}
+                            {paths.map((path, index) => (
+                                <Path
+                                    key={index}
+                                    d={pointsToSvgPath(path.points)}
+                                    stroke={path.color}
+                                    strokeWidth={path.strokeWidth}
+                                    fill="none"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            ))}
+
+                            {/* Render current path being drawn */}
+                            {currentPoints.length > 1 && (
+                                <Path
+                                    d={pointsToSvgPath(currentPoints)}
+                                    stroke={color}
+                                    strokeWidth={strokeWidth}
+                                    fill="none"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            )}
+                        </Svg>
+                    </View>
+                </View>
+
+                <View style={styles.toolsContainer}>
+                    <Text style={styles.toolTitle}>Colors:</Text>
+                    <View style={styles.colorOptions}>
+                        {colorOptions.map((option) => (
+                            <TouchableOpacity
+                                key={option.color}
+                                style={[
+                                    styles.colorOption,
+                                    { backgroundColor: option.color },
+                                    color === option.color &&
+                                        styles.selectedOption,
+                                ]}
+                                onPress={() => setColor(option.color)}
                             />
                         ))}
+                    </View>
 
-                        {/* Render current path being drawn */}
-                        {currentPoints.length > 1 && (
-                            <Path
-                                d={pointsToSvgPath(currentPoints)}
-                                stroke={color}
-                                strokeWidth={strokeWidth}
-                                fill="none"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
+                    <Text style={styles.toolTitle}>Stroke Width:</Text>
+                    <View style={styles.strokeOptions}>
+                        {strokeOptions.map((option) => (
+                            <TouchableOpacity
+                                key={option.width}
+                                style={[
+                                    styles.strokeOption,
+                                    strokeWidth === option.width &&
+                                        styles.selectedOption,
+                                ]}
+                                onPress={() => setStrokeWidth(option.width)}
+                            >
+                                <Text style={styles.strokeText}>
+                                    {option.name}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+
+                <View style={styles.buttonContainer}>
+                    <TouchableOpacity
+                        style={styles.clearButton}
+                        onPress={clearCanvas}
+                    >
+                        <Text style={styles.buttonText}>Clear</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.saveButton}
+                        onPress={saveCanvas}
+                        disabled={saving}
+                    >
+                        {saving ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.buttonText}>Save</Text>
                         )}
-                    </Svg>
+                    </TouchableOpacity>
                 </View>
             </View>
-
-            <View style={styles.toolsContainer}>
-                <Text style={styles.toolTitle}>Colors:</Text>
-                <View style={styles.colorOptions}>
-                    {colorOptions.map((option) => (
-                        <TouchableOpacity
-                            key={option.color}
-                            style={[
-                                styles.colorOption,
-                                { backgroundColor: option.color },
-                                color === option.color && styles.selectedOption,
-                            ]}
-                            onPress={() => setColor(option.color)}
-                        />
-                    ))}
-                </View>
-
-                <Text style={styles.toolTitle}>Stroke Width:</Text>
-                <View style={styles.strokeOptions}>
-                    {strokeOptions.map((option) => (
-                        <TouchableOpacity
-                            key={option.width}
-                            style={[
-                                styles.strokeOption,
-                                strokeWidth === option.width &&
-                                    styles.selectedOption,
-                            ]}
-                            onPress={() => setStrokeWidth(option.width)}
-                        >
-                            <Text style={styles.strokeText}>{option.name}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            </View>
-
-            <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                    style={styles.clearButton}
-                    onPress={clearCanvas}
-                >
-                    <Text style={styles.buttonText}>Clear</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.saveButton}
-                    onPress={saveCanvas}
-                    disabled={saving}
-                >
-                    {saving ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <Text style={styles.buttonText}>Save</Text>
-                    )}
-                </TouchableOpacity>
-            </View>
-        </View>
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
+    scrollContainer: {
+        flexGrow: 1,
+        paddingBottom: 20,
+    },
     container: {
         flex: 1,
         backgroundColor: "#f5f5f5",
