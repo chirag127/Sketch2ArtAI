@@ -4,7 +4,7 @@ import { StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "./screens/HomeScreen";
-import CanvasScreen from "./screens/CanvasScreen";
+import BasicCanvasScreen from "./screens/BasicCanvasScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -20,7 +20,7 @@ export default function App() {
                 />
                 <Stack.Screen
                     name="Canvas"
-                    component={CanvasScreen}
+                    component={BasicCanvasScreen}
                     options={{ headerShown: false }}
                 />
             </Stack.Navigator>

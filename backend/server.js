@@ -102,9 +102,24 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
         );
         // console.log(result);
 
+        try {
+            console.log(result.response.text());
+        } catch (error) {
+            console.error("Error logging response text:", error);
+        }
+        let inlineData;
+        try {
         // Extract the image data
-        const inlineData =
+        inlineData =
             result.response.candidates[0].content.parts[0].inlineData;
+        } catch (error) {
+            console.error("Error extracting inlineData:", error);
+            return res.status(500).json({
+                error: "Failed to extract inlineData",
+                details: error.message,
+            });
+        }
+
         const imageData = inlineData.data;
 
         // Save the image to a file
