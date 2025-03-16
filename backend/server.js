@@ -277,10 +277,21 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
         const data = Buffer.from(imageData, "base64");
         fs.writeFileSync(outputPath, data);
 
-        // Return the image data to the client
+        // Get the text response
+        let responseText = "";
+        try {
+            responseText = result.response.text();
+            console.log("Sending response text to frontend:", responseText);
+        } catch (error) {
+            console.error("Error getting response text:", error);
+            responseText = "No text response available";
+        }
+
+        // Return the image data and text to the client
         res.json({
             success: true,
             imageData: `data:${inlineData.mimeType};base64,${imageData}`,
+            responseText: responseText,
             message: "Sketch converted successfully",
         });
     } catch (error) {

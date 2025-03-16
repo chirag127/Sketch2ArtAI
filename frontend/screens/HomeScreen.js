@@ -10,6 +10,7 @@ import {
     Alert,
     TextInput,
 } from "react-native";
+import Markdown from "react-native-markdown-display";
 import * as ImagePickerExpo from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import { Platform } from "react-native";
@@ -32,6 +33,7 @@ export default function HomeScreen({ navigation, route }) {
     const [loading, setLoading] = useState(false);
     const [style, setStyle] = useState("Anime");
     const [customPrompt, setCustomPrompt] = useState("");
+    const [responseText, setResponseText] = useState("");
 
     // Handle sketch from Canvas screen
     useEffect(() => {
@@ -158,8 +160,16 @@ export default function HomeScreen({ navigation, route }) {
 
             if (response.data && response.data.imageData) {
                 setConvertedArt(response.data.imageData);
+
+                // Set the response text if available
+                if (response.data.responseText) {
+                    setResponseText(response.data.responseText);
+                } else {
+                    setResponseText("");
+                }
             } else {
                 Alert.alert("Error", "Failed to convert sketch");
+                setResponseText("");
             }
         } catch (error) {
             console.error("Error converting sketch:", error);
@@ -207,8 +217,16 @@ export default function HomeScreen({ navigation, route }) {
             // Extract base64 data from the data URI
             const base64Data = convertedArt.split(",")[1];
 
+            // Prepare share content with image and text
+            let shareContent = "Generated with Sketch2ArtAI";
+
+            // Add the response text if available
+            if (responseText) {
+                shareContent += "\n\n" + responseText;
+            }
+
             // Use our platform-specific sharing function
-            await platformShareImage(convertedArt, base64Data);
+            await platformShareImage(convertedArt, base64Data, shareContent);
         } catch (error) {
             console.error("Error sharing image:", error);
             Alert.alert("Error", "Failed to share image");
@@ -373,6 +391,18 @@ export default function HomeScreen({ navigation, route }) {
                                 style={styles.image}
                             />
                         </View>
+                        {responseText && (
+                            <View style={styles.responseTextContainer}>
+                                <Text style={styles.sectionTitle}>
+                                    AI Response
+                                </Text>
+                                <View style={styles.markdownContainer}>
+                                    <Markdown style={markdownStyles}>
+                                        {responseText}
+                                    </Markdown>
+                                </View>
+                            </View>
+                        )}
                         <TouchableOpacity
                             style={styles.shareButton}
                             onPress={shareImage}
@@ -394,6 +424,57 @@ export default function HomeScreen({ navigation, route }) {
         </ScrollView>
     );
 }
+
+// Markdown styles
+const markdownStyles = StyleSheet.create({
+    body: {
+        color: "#333",
+        fontSize: 16,
+        lineHeight: 24,
+    },
+    heading1: {
+        fontSize: 24,
+        fontWeight: "bold",
+        color: "#222",
+        marginVertical: 10,
+    },
+    heading2: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: "#333",
+        marginVertical: 8,
+    },
+    paragraph: {
+        marginVertical: 8,
+    },
+    list_item: {
+        marginVertical: 4,
+    },
+    bullet_list: {
+        marginLeft: 8,
+    },
+    ordered_list: {
+        marginLeft: 8,
+    },
+    code_block: {
+        backgroundColor: "#f5f5f5",
+        padding: 10,
+        borderRadius: 5,
+        fontFamily: "monospace",
+    },
+    fence: {
+        backgroundColor: "#f5f5f5",
+        padding: 10,
+        borderRadius: 5,
+        fontFamily: "monospace",
+    },
+    blockquote: {
+        borderLeftWidth: 4,
+        borderLeftColor: "#ccc",
+        paddingLeft: 10,
+        fontStyle: "italic",
+    },
+});
 
 const styles = StyleSheet.create({
     scrollContainer: {
@@ -544,5 +625,18 @@ const styles = StyleSheet.create({
         color: "white",
         fontSize: 16,
         fontWeight: "600",
+    },
+    responseTextContainer: {
+        marginTop: 20,
+        marginBottom: 20,
+        width: "100%",
+    },
+    markdownContainer: {
+        backgroundColor: "#fff",
+        borderRadius: 10,
+        padding: 15,
+        borderWidth: 1,
+        borderColor: "#ddd",
+        marginTop: 10,
     },
 });

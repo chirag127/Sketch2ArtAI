@@ -71,11 +71,34 @@ export const getMimeType = (extension) => {
  * Share an image in a platform-compatible way
  * @param {string} imageUri - The URI of the image to share
  * @param {string} base64Data - The base64 data of the image (for web)
+ * @param {string} shareContent - Optional text content to share with the image
  * @returns {Promise<void>}
  */
-export const shareImage = async (imageUri, base64Data) => {
+export const shareImage = async (imageUri, base64Data, shareContent = "") => {
     if (Platform.OS === "web") {
-        // On web, create a download link
+        try {
+            // Try to use the Web Share API if available
+            if (navigator.share) {
+                // Convert base64 to blob for sharing
+                const response = await fetch(imageUri);
+                const blob = await response.blob();
+                const file = new File([blob], "sketch2art.png", {
+                    type: "image/png",
+                });
+
+                await navigator.share({
+                    title: "Sketch2ArtAI Creation",
+                    text: shareContent,
+                    files: [file],
+                });
+                return;
+            }
+        } catch (error) {
+            console.error("Web Share API error:", error);
+            // Fall back to download if sharing fails
+        }
+
+        // Fallback: create a download link
         const link = document.createElement("a");
         link.href = imageUri;
         link.download = "sketch2art.png";
@@ -90,6 +113,8 @@ export const shareImage = async (imageUri, base64Data) => {
     await shareAsync(imageUri, {
         mimeType: "image/png",
         dialogTitle: "Share your converted art",
+        UTI: "public.png",
+        message: shareContent, // Include the share content as a message
     });
 };
 

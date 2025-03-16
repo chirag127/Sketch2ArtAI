@@ -20,11 +20,17 @@ const CANVAS_WIDTH = width - 40;
 const CANVAS_HEIGHT = height * 0.6;
 
 export default function BasicCanvasScreen({ navigation }) {
+    // Use useRef for mutable values that shouldn't trigger re-renders
+    const pathsRef = useRef([]);
+    const currentPointsRef = useRef([]);
+
+    // Use state for values that should trigger re-renders
     const [paths, setPaths] = useState([]);
     const [currentPoints, setCurrentPoints] = useState([]);
     const [color, setColor] = useState("#000000");
     const [strokeWidth, setStrokeWidth] = useState(5);
     const [saving, setSaving] = useState(false);
+    const [, forceUpdate] = useState(0); // Used to force re-renders
 
     const canvasRef = useRef(null);
 
@@ -40,44 +46,77 @@ export default function BasicCanvasScreen({ navigation }) {
     };
 
     // PanResponder for handling touch events
-    const panResponder = PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (evt, gestureState) => {
-            // Get the location relative to the canvas
-            const { locationX, locationY } = evt.nativeEvent;
-            setCurrentPoints([{ x: locationX, y: locationY }]);
-        },
-        onPanResponderMove: (evt, gestureState) => {
-            // Get the location relative to the canvas
-            const { locationX, locationY } = evt.nativeEvent;
-            // Only add the point if it's within the canvas bounds
-            if (
-                locationX >= 0 &&
-                locationX <= CANVAS_WIDTH &&
-                locationY >= 0 &&
-                locationY <= CANVAS_HEIGHT
-            ) {
-                setCurrentPoints((prevPoints) => [
-                    ...prevPoints,
-                    { x: locationX, y: locationY },
-                ]);
-            }
-        },
-        onPanResponderRelease: () => {
-            if (currentPoints.length > 1) {
-                setPaths((prevPaths) => [
-                    ...prevPaths,
-                    { points: currentPoints, color, strokeWidth },
-                ]);
-            }
-            setCurrentPoints([]);
-        },
-    });
+    const panResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: () => true,
+            onPanResponderGrant: (evt, gestureState) => {
+                // Get the location relative to the canvas
+                const { locationX, locationY } = evt.nativeEvent;
+
+                // Use refs for immediate updates without re-rendering
+                currentPointsRef.current = [{ x: locationX, y: locationY }];
+
+                // Update state for rendering
+                setCurrentPoints(currentPointsRef.current);
+            },
+            onPanResponderMove: (evt, gestureState) => {
+                // Get the location relative to the canvas
+                const { locationX, locationY } = evt.nativeEvent;
+
+                // Only add the point if it's within the canvas bounds
+                if (
+                    locationX >= 0 &&
+                    locationX <= CANVAS_WIDTH &&
+                    locationY >= 0 &&
+                    locationY <= CANVAS_HEIGHT
+                ) {
+                    // Update ref immediately
+                    currentPointsRef.current = [
+                        ...currentPointsRef.current,
+                        { x: locationX, y: locationY },
+                    ];
+
+                    // Update state less frequently to avoid too many re-renders
+                    // This improves performance while drawing
+                    if (currentPointsRef.current.length % 5 === 0) {
+                        setCurrentPoints([...currentPointsRef.current]);
+                    }
+                }
+            },
+            onPanResponderRelease: () => {
+                if (currentPointsRef.current.length > 1) {
+                    // Update refs
+                    pathsRef.current = [
+                        ...pathsRef.current,
+                        {
+                            points: currentPointsRef.current,
+                            color,
+                            strokeWidth,
+                        },
+                    ];
+
+                    // Update state for rendering
+                    setPaths([...pathsRef.current]);
+                }
+
+                // Reset current points
+                currentPointsRef.current = [];
+                setCurrentPoints([]);
+
+                // Force a re-render to ensure the canvas updates
+                forceUpdate((prev) => prev + 1);
+            },
+        })
+    ).current;
 
     const clearCanvas = () => {
+        // Clear both refs and state
+        pathsRef.current = [];
+        currentPointsRef.current = [];
         setPaths([]);
         setCurrentPoints([]);
+        forceUpdate((prev) => prev + 1); // Force re-render
     };
 
     const saveCanvas = async () => {
@@ -88,6 +127,7 @@ export default function BasicCanvasScreen({ navigation }) {
 
         try {
             setSaving(true);
+            console.log("Starting canvas capture...");
 
             // Capture options based on platform
             const captureOptions = {
@@ -97,13 +137,30 @@ export default function BasicCanvasScreen({ navigation }) {
                 result: Platform.OS === "web" ? "data-uri" : "file",
             };
 
+            console.log("Canvas ref:", canvasRef.current ? "exists" : "null");
+            console.log("Capture options:", captureOptions);
+
+            // Ensure the canvas ref exists
+            if (!canvasRef.current) {
+                throw new Error("Canvas reference is not available");
+            }
+
             // Capture the canvas view
             const uri = await captureRef(canvasRef, captureOptions);
 
-            console.log("Canvas captured:", uri);
+            console.log(
+                "Canvas captured successfully:",
+                uri.substring(0, 50) + "..."
+            );
+
+            // Make sure we have a valid URI
+            if (!uri) {
+                throw new Error("Failed to capture canvas - no URI returned");
+            }
 
             // Navigate back to HomeScreen with the sketch URI
             navigation.navigate("Home", { sketchUri: uri });
+            console.log("Navigation triggered");
         } catch (error) {
             console.error("Error saving canvas:", error);
             Alert.alert("Error", "Failed to save canvas: " + error.message);
@@ -128,110 +185,123 @@ export default function BasicCanvasScreen({ navigation }) {
 
     return (
         <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.container}>
-            <Text style={styles.title}>Draw Your Sketch</Text>
+            <View style={styles.container}>
+                <Text style={styles.title}>Draw Your Sketch</Text>
 
-            <View style={styles.canvasContainer}>
-                <View
-                    ref={canvasRef}
-                    style={styles.canvas}
-                    {...panResponder.panHandlers}
-                >
-                    <Svg
-                        width={CANVAS_WIDTH}
-                        height={CANVAS_HEIGHT}
-                        style={{ backgroundColor: "#ffffff" }}
-                    >
-                        {/* Background rectangle to ensure the entire canvas is captured */}
-                        <Path
-                            d={`M 0,0 H ${CANVAS_WIDTH} V ${CANVAS_HEIGHT} H 0 Z`}
-                            fill="#ffffff"
-                            stroke="none"
-                        />
+                <View style={styles.canvasContainer}>
+                    {/* Canvas container with fixed dimensions */}
+                    <View style={styles.canvasWrapper}>
+                        {/* Actual drawing area with pan responder */}
+                        <View
+                            ref={canvasRef}
+                            style={styles.canvas}
+                            {...panResponder.panHandlers}
+                            collapsable={
+                                false
+                            } /* Important for view-shot to work */
+                        >
+                            <Svg
+                                width={CANVAS_WIDTH}
+                                height={CANVAS_HEIGHT}
+                                style={{ backgroundColor: "#ffffff" }}
+                            >
+                                {/* Background rectangle to ensure the entire canvas is captured */}
+                                <Path
+                                    d={`M 0,0 H ${CANVAS_WIDTH} V ${CANVAS_HEIGHT} H 0 Z`}
+                                    fill="#ffffff"
+                                    stroke="none"
+                                />
 
-                        {/* Render completed paths */}
-                        {paths.map((path, index) => (
-                            <Path
-                                key={index}
-                                d={pointsToSvgPath(path.points)}
-                                stroke={path.color}
-                                strokeWidth={path.strokeWidth}
-                                fill="none"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
+                                {/* Render completed paths */}
+                                {pathsRef.current.map((path, index) => (
+                                    <Path
+                                        key={`path-${index}`}
+                                        d={pointsToSvgPath(path.points)}
+                                        stroke={path.color}
+                                        strokeWidth={path.strokeWidth}
+                                        fill="none"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                ))}
+
+                                {/* Render current path being drawn */}
+                                {currentPointsRef.current.length > 1 && (
+                                    <Path
+                                        key="current-path"
+                                        d={pointsToSvgPath(
+                                            currentPointsRef.current
+                                        )}
+                                        stroke={color}
+                                        strokeWidth={strokeWidth}
+                                        fill="none"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                )}
+                            </Svg>
+                        </View>
+                    </View>
+                </View>
+
+                <View style={styles.toolsContainer}>
+                    <Text style={styles.toolTitle}>Colors:</Text>
+                    <View style={styles.colorOptions}>
+                        {colorOptions.map((option) => (
+                            <TouchableOpacity
+                                key={option.color}
+                                style={[
+                                    styles.colorOption,
+                                    { backgroundColor: option.color },
+                                    color === option.color &&
+                                        styles.selectedOption,
+                                ]}
+                                onPress={() => setColor(option.color)}
                             />
                         ))}
+                    </View>
 
-                        {/* Render current path being drawn */}
-                        {currentPoints.length > 1 && (
-                            <Path
-                                d={pointsToSvgPath(currentPoints)}
-                                stroke={color}
-                                strokeWidth={strokeWidth}
-                                fill="none"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
+                    <Text style={styles.toolTitle}>Stroke Width:</Text>
+                    <View style={styles.strokeOptions}>
+                        {strokeOptions.map((option) => (
+                            <TouchableOpacity
+                                key={option.width}
+                                style={[
+                                    styles.strokeOption,
+                                    strokeWidth === option.width &&
+                                        styles.selectedOption,
+                                ]}
+                                onPress={() => setStrokeWidth(option.width)}
+                            >
+                                <Text style={styles.strokeText}>
+                                    {option.name}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+
+                <View style={styles.buttonContainer}>
+                    <TouchableOpacity
+                        style={styles.clearButton}
+                        onPress={clearCanvas}
+                    >
+                        <Text style={styles.buttonText}>Clear</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.saveButton}
+                        onPress={saveCanvas}
+                        disabled={saving}
+                    >
+                        {saving ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.buttonText}>Save</Text>
                         )}
-                    </Svg>
+                    </TouchableOpacity>
                 </View>
             </View>
-
-            <View style={styles.toolsContainer}>
-                <Text style={styles.toolTitle}>Colors:</Text>
-                <View style={styles.colorOptions}>
-                    {colorOptions.map((option) => (
-                        <TouchableOpacity
-                            key={option.color}
-                            style={[
-                                styles.colorOption,
-                                { backgroundColor: option.color },
-                                color === option.color && styles.selectedOption,
-                            ]}
-                            onPress={() => setColor(option.color)}
-                        />
-                    ))}
-                </View>
-
-                <Text style={styles.toolTitle}>Stroke Width:</Text>
-                <View style={styles.strokeOptions}>
-                    {strokeOptions.map((option) => (
-                        <TouchableOpacity
-                            key={option.width}
-                            style={[
-                                styles.strokeOption,
-                                strokeWidth === option.width &&
-                                    styles.selectedOption,
-                            ]}
-                            onPress={() => setStrokeWidth(option.width)}
-                        >
-                            <Text style={styles.strokeText}>{option.name}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            </View>
-
-            <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                    style={styles.clearButton}
-                    onPress={clearCanvas}
-                >
-                    <Text style={styles.buttonText}>Clear</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.saveButton}
-                    onPress={saveCanvas}
-                    disabled={saving}
-                >
-                    {saving ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <Text style={styles.buttonText}>Save</Text>
-                    )}
-                </TouchableOpacity>
-            </View>
-        </View>
         </ScrollView>
     );
 }
@@ -262,11 +332,21 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         backgroundColor: "#fff",
         overflow: "hidden",
+        marginBottom: 20,
+    },
+    canvasWrapper: {
+        width: CANVAS_WIDTH,
+        height: CANVAS_HEIGHT,
+        backgroundColor: "#fff",
+        position: "relative",
     },
     canvas: {
         width: CANVAS_WIDTH,
         height: CANVAS_HEIGHT,
         backgroundColor: "#fff",
+        position: "absolute",
+        top: 0,
+        left: 0,
     },
     toolsContainer: {
         marginTop: 20,
