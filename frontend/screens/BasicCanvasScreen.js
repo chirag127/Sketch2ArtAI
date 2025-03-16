@@ -199,6 +199,21 @@ export default function BasicCanvasScreen({ navigation }) {
                             collapsable={
                                 false
                             } /* Important for view-shot to work */
+                            onTouchStart={
+                                Platform.OS === "web"
+                                    ? (e) => e.preventDefault()
+                                    : undefined
+                            }
+                            onTouchMove={
+                                Platform.OS === "web"
+                                    ? (e) => e.preventDefault()
+                                    : undefined
+                            }
+                            onTouchEnd={
+                                Platform.OS === "web"
+                                    ? (e) => e.preventDefault()
+                                    : undefined
+                            }
                         >
                             <Svg
                                 width={CANVAS_WIDTH}
@@ -333,12 +348,18 @@ const styles = StyleSheet.create({
         backgroundColor: "#fff",
         overflow: "hidden",
         marginBottom: 20,
+        ...(Platform.OS === "web" && {
+            touchAction: "none", // Prevents browser handling of all touch gestures
+        }),
     },
     canvasWrapper: {
         width: CANVAS_WIDTH,
         height: CANVAS_HEIGHT,
         backgroundColor: "#fff",
         position: "relative",
+        ...(Platform.OS === "web" && {
+            touchAction: "none", // Prevents browser handling of all touch gestures
+        }),
     },
     canvas: {
         width: CANVAS_WIDTH,
@@ -347,6 +368,12 @@ const styles = StyleSheet.create({
         position: "absolute",
         top: 0,
         left: 0,
+        ...(Platform.OS === "web" && {
+            touchAction: "none", // Prevents browser handling of touch gestures
+            WebkitTouchCallout: "none", // Disables callout
+            WebkitUserSelect: "none", // Disables selection
+            userSelect: "none", // Disables selection
+        }),
     },
     toolsContainer: {
         marginTop: 20,
