@@ -3,16 +3,11 @@ const cors = require("cors");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
-const {
-    GoogleGenerativeAI,
-    HarmCategory,
-    HarmBlockThreshold,
-} = require("@google/generative-ai");
-const { GoogleAIFileManager } = require("@google/generative-ai/server");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 require("dotenv").config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 4000;
 
 // Middleware
 app.use(cors());
@@ -37,20 +32,14 @@ const upload = multer({ storage: storage });
 // Initialize Google Generative AI
 const apiKey = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey);
-const fileManager = new GoogleAIFileManager(apiKey);
 
-// Upload file to Gemini
-async function uploadToGemini(filePath, mimeType) {
+// Function to read file as base64
+async function readFileAsBase64(filePath) {
     try {
-        const uploadResult = await fileManager.uploadFile(filePath, {
-            mimeType,
-            displayName: path.basename(filePath),
-        });
-        const file = uploadResult.file;
-        console.log(`Uploaded file ${file.displayName} as: ${file.name}`);
-        return file;
+        const fileBuffer = fs.readFileSync(filePath);
+        return fileBuffer.toString("base64");
     } catch (error) {
-        console.error("Error uploading to Gemini:", error);
+        console.error("Error reading file:", error);
         throw error;
     }
 }
@@ -66,8 +55,8 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
         const mimeType = req.file.mimetype;
         const style = req.body.style || "Anime"; // Default style is Anime
 
-        // Upload the file to Gemini
-        const file = await uploadToGemini(filePath, mimeType);
+        // Read file as base64
+        const fileBase64 = await readFileAsBase64(filePath);
 
         // Set up the model
         const model = genAI.getGenerativeModel({
@@ -91,9 +80,9 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
                     role: "user",
                     parts: [
                         {
-                            fileData: {
-                                mimeType: file.mimeType,
-                                fileUri: file.uri,
+                            inlineData: {
+                                mimeType: mimeType,
+                                data: fileBase64,
                             },
                         },
                     ],
@@ -105,6 +94,7 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
         const result = await chatSession.sendMessage(
             `Convert this sketch into ${style} style art`
         );
+        console.log(result);
 
         // Extract the image data
         const inlineData =
