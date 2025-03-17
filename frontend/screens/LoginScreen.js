@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
     StyleSheet,
     Text,
@@ -10,6 +10,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    Dimensions,
 } from "react-native";
 import AuthContext from "../context/AuthContext";
 
@@ -17,8 +18,28 @@ export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDesktop, setIsDesktop] = useState(false);
 
     const { login, isLoading } = useContext(AuthContext);
+
+    // Check if the device is a desktop based on screen width
+    useEffect(() => {
+        const updateLayout = () => {
+            const { width } = Dimensions.get("window");
+            setIsDesktop(width >= 768);
+        };
+
+        updateLayout();
+        Dimensions.addEventListener("change", updateLayout);
+
+        return () => {
+            // Clean up event listener
+            const dimensionsHandler = Dimensions.removeEventListener;
+            if (dimensionsHandler) {
+                dimensionsHandler("change", updateLayout);
+            }
+        };
+    }, []);
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -54,7 +75,12 @@ export default function LoginScreen({ navigation }) {
             style={styles.container}
         >
             <ScrollView contentContainerStyle={styles.scrollContainer}>
-                <View style={styles.formContainer}>
+                <View
+                    style={[
+                        styles.formContainer,
+                        isDesktop && { maxWidth: 450 },
+                    ]}
+                >
                     <Text style={styles.title}>Sketch2ArtAI</Text>
                     <Text style={styles.subtitle}>Login to your account</Text>
 
@@ -122,6 +148,7 @@ const styles = StyleSheet.create({
     scrollContainer: {
         flexGrow: 1,
         justifyContent: "center",
+        alignItems: "center", // Center content horizontally
     },
     formContainer: {
         padding: 20,
@@ -134,6 +161,8 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 3,
         marginVertical: 40,
+        width: "100%",
+        maxWidth: 450, // Limit width on larger screens
     },
     title: {
         fontSize: 28,
@@ -163,6 +192,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         paddingVertical: 12,
         fontSize: 16,
+        width: "100%",
     },
     button: {
         backgroundColor: "#4a90e2",
@@ -170,6 +200,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         alignItems: "center",
         marginTop: 10,
+        width: "100%",
     },
     disabledButton: {
         backgroundColor: "#a0c4e9",

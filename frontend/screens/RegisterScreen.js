@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
     StyleSheet,
     Text,
@@ -10,6 +10,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    Dimensions,
 } from "react-native";
 import AuthContext from "../context/AuthContext";
 
@@ -18,8 +19,28 @@ export default function RegisterScreen({ navigation }) {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDesktop, setIsDesktop] = useState(false);
 
     const { register, isLoading } = useContext(AuthContext);
+
+    // Check if the device is a desktop based on screen width
+    useEffect(() => {
+        const updateLayout = () => {
+            const { width } = Dimensions.get("window");
+            setIsDesktop(width >= 768);
+        };
+
+        updateLayout();
+        Dimensions.addEventListener("change", updateLayout);
+
+        return () => {
+            // Clean up event listener
+            const dimensionsHandler = Dimensions.removeEventListener;
+            if (dimensionsHandler) {
+                dimensionsHandler("change", updateLayout);
+            }
+        };
+    }, []);
 
     const validateEmail = (email) => {
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -74,7 +95,12 @@ export default function RegisterScreen({ navigation }) {
             style={styles.container}
         >
             <ScrollView contentContainerStyle={styles.scrollContainer}>
-                <View style={styles.formContainer}>
+                <View
+                    style={[
+                        styles.formContainer,
+                        isDesktop && { maxWidth: 450 },
+                    ]}
+                >
                     <Text style={styles.title}>Sketch2ArtAI</Text>
                     <Text style={styles.subtitle}>Create a new account</Text>
 
@@ -153,12 +179,15 @@ const styles = StyleSheet.create({
     scrollContainer: {
         flexGrow: 1,
         justifyContent: "center",
+        alignItems: "center", // Center content horizontally
     },
     formContainer: {
         padding: 20,
         marginHorizontal: 20,
         backgroundColor: "#fff",
         borderRadius: 10,
+        width: "100%",
+        maxWidth: 450, // Limit width on larger screens
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -194,6 +223,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         paddingVertical: 12,
         fontSize: 16,
+        width: "100%",
     },
     button: {
         backgroundColor: "#4a90e2",
@@ -201,6 +231,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         alignItems: "center",
         marginTop: 10,
+        width: "100%",
     },
     disabledButton: {
         backgroundColor: "#a0c4e9",

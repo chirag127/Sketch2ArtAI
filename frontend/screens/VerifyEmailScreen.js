@@ -9,6 +9,8 @@ import {
     Alert,
     KeyboardAvoidingView,
     Platform,
+    Dimensions,
+    ScrollView,
 } from "react-native";
 import AuthContext from "../context/AuthContext";
 
@@ -17,6 +19,7 @@ export default function VerifyEmailScreen({ navigation }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [resendDisabled, setResendDisabled] = useState(false);
     const [countdown, setCountdown] = useState(0);
+    const [isDesktop, setIsDesktop] = useState(false);
 
     const {
         verifyEmail,
@@ -35,6 +38,25 @@ export default function VerifyEmailScreen({ navigation }) {
             setResendDisabled(false);
         }
     }, [countdown, resendDisabled]);
+
+    // Check if the device is a desktop based on screen width
+    useEffect(() => {
+        const updateLayout = () => {
+            const { width } = Dimensions.get("window");
+            setIsDesktop(width >= 768);
+        };
+
+        updateLayout();
+        Dimensions.addEventListener("change", updateLayout);
+
+        return () => {
+            // Clean up event listener
+            const dimensionsHandler = Dimensions.removeEventListener;
+            if (dimensionsHandler) {
+                dimensionsHandler("change", updateLayout);
+            }
+        };
+    }, []);
 
     const handleVerify = async () => {
         if (!verificationCode) {
@@ -120,65 +142,73 @@ export default function VerifyEmailScreen({ navigation }) {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={styles.container}
         >
-            <View style={styles.formContainer}>
-                <Text style={styles.title}>Verify Your Email</Text>
-                <Text style={styles.subtitle}>
-                    We've sent a verification code to {verificationEmail}.
-                    Please enter the code below to verify your email.
-                </Text>
-
-                <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Verification Code</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Enter 6-digit code"
-                        value={verificationCode}
-                        onChangeText={setVerificationCode}
-                        keyboardType="number-pad"
-                        maxLength={6}
-                    />
-                </View>
-
-                <TouchableOpacity
+            <ScrollView contentContainerStyle={styles.scrollContainer}>
+                <View
                     style={[
-                        styles.button,
-                        (isSubmitting || isLoading) && styles.disabledButton,
+                        styles.formContainer,
+                        isDesktop && { maxWidth: 450 },
                     ]}
-                    onPress={handleVerify}
-                    disabled={isSubmitting || isLoading}
                 >
-                    {isSubmitting || isLoading ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <Text style={styles.buttonText}>Verify Email</Text>
-                    )}
-                </TouchableOpacity>
+                    <Text style={styles.title}>Verify Your Email</Text>
+                    <Text style={styles.subtitle}>
+                        We've sent a verification code to {verificationEmail}.
+                        Please enter the code below to verify your email.
+                    </Text>
 
-                <View style={styles.resendContainer}>
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.label}>Verification Code</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Enter 6-digit code"
+                            value={verificationCode}
+                            onChangeText={setVerificationCode}
+                            keyboardType="number-pad"
+                            maxLength={6}
+                        />
+                    </View>
+
                     <TouchableOpacity
-                        onPress={handleResendCode}
-                        disabled={resendDisabled}
+                        style={[
+                            styles.button,
+                            (isSubmitting || isLoading) &&
+                                styles.disabledButton,
+                        ]}
+                        onPress={handleVerify}
+                        disabled={isSubmitting || isLoading}
                     >
-                        <Text
-                            style={[
-                                styles.resendText,
-                                resendDisabled && styles.disabledText,
-                            ]}
+                        {isSubmitting || isLoading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.buttonText}>Verify Email</Text>
+                        )}
+                    </TouchableOpacity>
+
+                    <View style={styles.resendContainer}>
+                        <TouchableOpacity
+                            onPress={handleResendCode}
+                            disabled={resendDisabled}
                         >
-                            {resendDisabled
-                                ? `Resend code in ${countdown}s`
-                                : "Resend verification code"}
-                        </Text>
+                            <Text
+                                style={[
+                                    styles.resendText,
+                                    resendDisabled && styles.disabledText,
+                                ]}
+                            >
+                                {resendDisabled
+                                    ? `Resend code in ${countdown}s`
+                                    : "Resend verification code"}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity
+                        style={styles.cancelButton}
+                        onPress={handleCancel}
+                    >
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
                     </TouchableOpacity>
                 </View>
-
-                <TouchableOpacity
-                    style={styles.cancelButton}
-                    onPress={handleCancel}
-                >
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-            </View>
+            </ScrollView>
         </KeyboardAvoidingView>
     );
 }
@@ -187,7 +217,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#f5f5f5",
+    },
+    scrollContainer: {
+        flexGrow: 1,
         justifyContent: "center",
+        alignItems: "center", // Center content horizontally
         padding: 20,
     },
     formContainer: {
@@ -199,6 +233,8 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+        width: "100%",
+        maxWidth: 450, // Limit width on larger screens
     },
     title: {
         fontSize: 24,
@@ -231,12 +267,14 @@ const styles = StyleSheet.create({
         fontSize: 16,
         textAlign: "center",
         letterSpacing: 8,
+        width: "100%",
     },
     button: {
         backgroundColor: "#4a90e2",
         paddingVertical: 15,
         borderRadius: 8,
         alignItems: "center",
+        width: "100%",
     },
     disabledButton: {
         backgroundColor: "#a0c4e9",
@@ -261,6 +299,7 @@ const styles = StyleSheet.create({
         marginTop: 20,
         paddingVertical: 12,
         alignItems: "center",
+        width: "100%",
     },
     cancelButtonText: {
         color: "#f44336",
