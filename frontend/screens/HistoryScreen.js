@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
+import AuthContext from "../context/AuthContext";
 import { useFocusEffect } from "@react-navigation/native";
 import {
     StyleSheet,
@@ -18,6 +19,8 @@ import Markdown from "react-native-markdown-display";
 import * as FileSystem from "expo-file-system";
 
 export default function HistoryScreen({ navigation }) {
+    const { userToken } = useContext(AuthContext);
+
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -27,7 +30,11 @@ export default function HistoryScreen({ navigation }) {
         try {
             setLoading(true);
             // console.log("Fetching history from:", `${API_URL}/history`);
-            const response = await axios.get(`${API_URL}/history`);
+            const response = await axios.get(`${API_URL}/history`, {
+                headers: {
+                    Authorization: `Bearer ${userToken}`,
+                },
+            });
             // console.log("History data received:", response.data);
             setHistory(response.data);
         } catch (error) {
@@ -64,7 +71,11 @@ export default function HistoryScreen({ navigation }) {
     const deleteHistoryItem = async (id) => {
         try {
             console.log("Deleting history item with ID:", id);
-            await axios.delete(`${API_URL}/history/${id}`);
+            await axios.delete(`${API_URL}/history/${id}`, {
+                headers: {
+                    Authorization: `Bearer ${userToken}`,
+                },
+            });
             setHistory(history.filter((item) => item._id !== id));
             Alert.alert("Success", "History item deleted successfully");
         } catch (error) {

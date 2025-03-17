@@ -6,11 +6,19 @@ const path = require("path");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { promisify } = require("util");
 const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
 const { uploadToFreeImageHost } = require("./utils/imageUpload");
 require("dotenv").config();
 
 // Import models
 const ImageHistory = require("./models/ImageHistory");
+const User = require("./models/User");
+
+// Import middleware
+const auth = require("./middleware/auth");
+
+// Import routes
+const authRoutes = require("./routes/auth");
 
 // Promisify fs functions
 const readdir = promisify(fs.readdir);
@@ -40,6 +48,9 @@ app.use(express.json());
 
 // Handle preflight requests
 app.options("*", cors());
+
+// Use auth routes
+app.use("/api/auth", authRoutes);
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -73,7 +84,7 @@ async function readFileAsBase64(filePath) {
 }
 
 // API endpoint for sketch to art conversion
-app.post("/api/convert", upload.single("sketch"), async (req, res) => {
+app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
     try {
         console.log("Received convert request");
         console.log("Request body keys:", Object.keys(req.body));
@@ -318,6 +329,7 @@ app.post("/api/convert", upload.single("sketch"), async (req, res) => {
                 style,
                 prompt: customPrompt || "",
                 responseText,
+                user: req.user._id, // Add user reference
             });
 
             await historyItem.save();
@@ -423,9 +435,9 @@ app.post("/api/cleanup", cors(), async (req, res) => {
 });
 
 // API endpoint to get image history
-app.get("/api/history", async (req, res) => {
+app.get("/api/history", auth, async (req, res) => {
     try {
-        const history = await ImageHistory.find()
+        const history = await ImageHistory.find({ user: req.user._id })
             .sort({ createdAt: -1 })
             .limit(20);
         res.json(history);
@@ -439,9 +451,28 @@ app.get("/api/history", async (req, res) => {
 });
 
 // API endpoint to delete a history item
-app.delete("/api/history/:id", async (req, res) => {
+app.delete("/api/history/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
+
+        // Find the history item
+        const historyItem = await ImageHistory.findById(id);
+
+        // Check if history item exists
+        if (!historyItem) {
+            return res.status(404).json({ error: "History item not found" });
+        }
+
+        // Check if user owns the history item
+        if (
+            historyItem.user &&
+            historyItem.user.toString() !== req.user._id.toString()
+        ) {
+            return res
+                .status(403)
+                .json({ error: "Not authorized to delete this history item" });
+        }
+
         await ImageHistory.findByIdAndDelete(id);
         res.json({
             success: true,

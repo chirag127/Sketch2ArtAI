@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
     StyleSheet,
     Text,
@@ -10,6 +10,7 @@ import {
     Alert,
     TextInput,
 } from "react-native";
+import AuthContext from "../context/AuthContext";
 import Markdown from "react-native-markdown-display";
 import * as ImagePickerExpo from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
@@ -28,6 +29,8 @@ import axios from "axios";
 import { API_URL } from "../env";
 
 export default function HomeScreen({ navigation, route }) {
+    const { userToken } = useContext(AuthContext);
+
     const [sketch, setSketch] = useState(null);
     const [convertedArt, setConvertedArt] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -157,6 +160,7 @@ export default function HomeScreen({ navigation, route }) {
             const response = await axios.post(API_URL + "/convert", formData, {
                 headers: {
                     "Content-Type": "multipart/form-data",
+                    Authorization: `Bearer ${userToken}`,
                 },
             });
 
@@ -311,7 +315,15 @@ export default function HomeScreen({ navigation, route }) {
             const baseUrl = API_URL;
             const cleanupUrl = `${baseUrl}/cleanup`;
 
-            const response = await axios.post(cleanupUrl);
+            const response = await axios.post(
+                cleanupUrl,
+                {},
+                {
+                    headers: {
+                        Authorization: `Bearer ${userToken}`,
+                    },
+                }
+            );
 
             if (response.data && response.data.success) {
                 Alert.alert(
