@@ -50,7 +50,7 @@ export default function HomeScreen({ navigation, route }) {
     const pickImage = async () => {
         try {
             const result = await ImagePickerExpo.launchImageLibraryAsync({
-                mediaTypes: ImagePickerExpo.MediaTypeOptions.Images,
+                mediaTypes: ["images"],
                 allowsEditing: true,
                 aspect: [1, 1],
                 quality: 1,
