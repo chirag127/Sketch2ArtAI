@@ -9,6 +9,7 @@ import {
     ScrollView,
     Alert,
     TextInput,
+    Share,
 } from "react-native";
 import AuthContext from "../context/AuthContext";
 import Markdown from "react-native-markdown-display";
@@ -164,8 +165,24 @@ export default function HomeScreen({ navigation, route }) {
                 },
             });
 
-            if (response.data && response.data.imageData) {
-                setConvertedArt(response.data.imageData);
+            if (response.data && response.data.success) {
+                // Check if we have image data
+                if (response.data.hasImage && response.data.imageData) {
+                    setConvertedArt(response.data.imageData);
+
+                    // Store the image URLs if available
+                    if (response.data.convertedImageUrl) {
+                        console.log(
+                            "Converted image URL:",
+                            response.data.convertedImageUrl
+                        );
+                        setConvertedImageUrl(response.data.convertedImageUrl);
+                    }
+                } else {
+                    // Text-only response
+                    setConvertedArt(null);
+                    setConvertedImageUrl("");
+                }
 
                 // Set the response text if available
                 if (response.data.responseText) {
@@ -174,7 +191,7 @@ export default function HomeScreen({ navigation, route }) {
                     setResponseText("");
                 }
 
-                // Store the image URLs if available
+                // Store the original image URL if available
                 if (response.data.originalImageUrl) {
                     console.log(
                         "Original image URL:",
@@ -182,16 +199,10 @@ export default function HomeScreen({ navigation, route }) {
                     );
                     setOriginalImageUrl(response.data.originalImageUrl);
                 }
-                if (response.data.convertedImageUrl) {
-                    console.log(
-                        "Converted image URL:",
-                        response.data.convertedImageUrl
-                    );
-                    setConvertedImageUrl(response.data.convertedImageUrl);
-                }
             } else {
                 Alert.alert("Error", "Failed to convert sketch");
                 setResponseText("");
+                setConvertedArt(null);
             }
         } catch (error) {
             console.error("Error converting sketch:", error);
@@ -250,61 +261,78 @@ export default function HomeScreen({ navigation, route }) {
     };
 
     const shareImage = async () => {
-        if (!convertedArt) {
-            Alert.alert("No image", "Please convert a sketch first");
+        if (!convertedArt && !responseText) {
+            Alert.alert("Nothing to share", "Please convert a sketch first");
             return;
         }
 
         try {
-            // If we have a hosted URL, use that for sharing
-            if (convertedImageUrl) {
-                // Prepare share content with image and text
-                let shareContent = "Generated with Sketch2ArtAI";
+            // Prepare share content with text
+            let shareContent = "Generated with Sketch2ArtAI";
 
-                // Add the response text if available
-                if (responseText) {
-                    shareContent += "\n\n" + responseText;
-                }
+            // Add the response text if available
+            if (responseText) {
+                shareContent += "\n\n" + responseText;
+            }
 
-                if (Platform.OS === "web") {
-                    window.open(convertedImageUrl, "_blank");
-                } else {
-                    // For native platforms, download and share
-                    const filename = `sketch2art_${Date.now()}.png`;
-                    const uri = await downloadImage(
-                        convertedImageUrl,
-                        filename
-                    );
+            // If we have an image, share it along with the text
+            if (convertedArt) {
+                // If we have a hosted URL, use that for sharing
+                if (convertedImageUrl) {
+                    if (Platform.OS === "web") {
+                        window.open(convertedImageUrl, "_blank");
+                    } else {
+                        // For native platforms, download and share
+                        const filename = `sketch2art_${Date.now()}.png`;
+                        const uri = await downloadImage(
+                            convertedImageUrl,
+                            filename
+                        );
 
-                    if (uri) {
-                        await Share.share({
-                            url: uri,
-                            message: shareContent,
-                        });
+                        if (uri) {
+                            await Share.share({
+                                url: uri,
+                                message: shareContent,
+                            });
+                        }
                     }
+                } else {
+                    // Fallback to the old method if no URL is available
+                    const base64Data = convertedArt.split(",")[1];
+
+                    // Use our platform-specific sharing function
+                    await platformShareImage(
+                        convertedArt,
+                        base64Data,
+                        shareContent
+                    );
                 }
             } else {
-                // Fallback to the old method if no URL is available
-                const base64Data = convertedArt.split(",")[1];
-
-                // Prepare share content with image and text
-                let shareContent = "Generated with Sketch2ArtAI";
-
-                // Add the response text if available
-                if (responseText) {
-                    shareContent += "\n\n" + responseText;
+                // Text-only sharing
+                if (Platform.OS === "web") {
+                    // For web, create a temporary text element and copy to clipboard
+                    navigator.clipboard
+                        .writeText(shareContent)
+                        .then(() => {
+                            Alert.alert(
+                                "Copied to clipboard",
+                                "The AI response has been copied to your clipboard"
+                            );
+                        })
+                        .catch((err) => {
+                            console.error("Could not copy text: ", err);
+                            Alert.alert("Error", "Could not copy to clipboard");
+                        });
+                } else {
+                    // For native platforms, use Share API
+                    await Share.share({
+                        message: shareContent,
+                    });
                 }
-
-                // Use our platform-specific sharing function
-                await platformShareImage(
-                    convertedArt,
-                    base64Data,
-                    shareContent
-                );
             }
         } catch (error) {
-            console.error("Error sharing image:", error);
-            Alert.alert("Error", "Failed to share image");
+            console.error("Error sharing:", error);
+            Alert.alert("Error", "Failed to share content");
         }
     };
 
@@ -465,6 +493,7 @@ export default function HomeScreen({ navigation, route }) {
                     )}
                 </TouchableOpacity>
 
+                {/* Display converted art if available */}
                 {convertedArt && (
                     <>
                         <Text style={styles.sectionTitle}>Converted Art</Text>
@@ -474,18 +503,6 @@ export default function HomeScreen({ navigation, route }) {
                                 style={styles.image}
                             />
                         </View>
-                        {responseText && (
-                            <View style={styles.responseTextContainer}>
-                                <Text style={styles.sectionTitle}>
-                                    AI Response
-                                </Text>
-                                <View style={styles.markdownContainer}>
-                                    <Markdown style={markdownStyles}>
-                                        {responseText}
-                                    </Markdown>
-                                </View>
-                            </View>
-                        )}
                         <TouchableOpacity
                             style={styles.shareButton}
                             onPress={shareImage}
@@ -493,6 +510,29 @@ export default function HomeScreen({ navigation, route }) {
                             <Text style={styles.shareButtonText}>Share</Text>
                         </TouchableOpacity>
                     </>
+                )}
+
+                {/* Display AI response text if available */}
+                {responseText && (
+                    <View style={styles.responseTextContainer}>
+                        <Text style={styles.sectionTitle}>AI Response</Text>
+                        <View style={styles.markdownContainer}>
+                            <Markdown style={markdownStyles}>
+                                {responseText}
+                            </Markdown>
+                        </View>
+                        {/* Add share button for text-only responses */}
+                        {!convertedArt && (
+                            <TouchableOpacity
+                                style={[styles.shareButton, { marginTop: 15 }]}
+                                onPress={shareImage}
+                            >
+                                <Text style={styles.shareButtonText}>
+                                    Share Response
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 )}
 
                 <TouchableOpacity

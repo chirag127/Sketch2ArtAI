@@ -202,7 +202,7 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
 
         // Add custom prompt if provided
         if (customPrompt) {
-            promptMessage = `${promptMessage}- additional prompt: ${customPrompt}`;
+            promptMessage = `${promptMessage}- Additional prompt: ${customPrompt}`;
         }
 
         console.log("Sending prompt to AI:", promptMessage);
@@ -221,12 +221,14 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
             });
         }
 
-        console.log(
-            "Response candidates:",
-            result.response.candidates ? result.response.candidates.length : 0
-        );
-
+        // Log response structure for debugging
         try {
+            console.log(
+                "Response candidates:",
+                result.response.candidates
+                    ? result.response.candidates.length
+                    : 0
+            );
             console.log("Response text:", result.response.text());
         } catch (error) {
             console.error("Error logging response text:", error);
@@ -247,7 +249,10 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
             )
         );
 
-        let inlineData;
+        let inlineData = null;
+        let imageData = null;
+        let hasImage = false;
+
         try {
             // Check if we have candidates
             if (
@@ -276,35 +281,58 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
             );
 
             if (!imagePart) {
-                throw new Error("No part with inlineData found");
-            }
+                console.log(
+                    "No image part found in response - this may be a text-only response"
+                );
+                // Continue without image data - we'll handle text-only responses
+            } else {
+                inlineData = imagePart.inlineData;
+                imageData = inlineData.data;
+                hasImage = true;
 
-            inlineData = imagePart.inlineData;
+                // Save the image to a file
+                const outputDir = path.join(__dirname, "outputs");
+                if (!fs.existsSync(outputDir)) {
+                    fs.mkdirSync(outputDir, { recursive: true });
+                }
+
+                const outputPath = path.join(
+                    outputDir,
+                    `output_${Date.now()}.png`
+                );
+                const data = Buffer.from(imageData, "base64");
+                fs.writeFileSync(outputPath, data);
+            }
         } catch (error) {
             console.error("Error extracting inlineData:", error);
-            return res.status(500).json({
-                error: "Failed to extract inlineData",
-                details: error.message,
-                responseStructure: JSON.stringify(result.response, null, 2),
-            });
+            // Don't return an error - we might still have a valid text response
+            // Just log the error and continue
         }
-
-        const imageData = inlineData.data;
-
-        // Save the image to a file
-        const outputDir = path.join(__dirname, "outputs");
-        if (!fs.existsSync(outputDir)) {
-            fs.mkdirSync(outputDir, { recursive: true });
-        }
-
-        const outputPath = path.join(outputDir, `output_${Date.now()}.png`);
-        const data = Buffer.from(imageData, "base64");
-        fs.writeFileSync(outputPath, data);
 
         // Get the text response
         let responseText = "";
         try {
-            responseText = result.response.text();
+            // Check if we have a structured response (like the one provided in the message)
+            if (
+                result.response &&
+                result.response.candidates &&
+                result.response.candidates[0] &&
+                result.response.candidates[0].content &&
+                result.response.candidates[0].content.parts &&
+                result.response.candidates[0].content.parts[0] &&
+                result.response.candidates[0].content.parts[0].text
+            ) {
+                // Extract text from the structured response
+                responseText =
+                    result.response.candidates[0].content.parts[0].text;
+                console.log(
+                    "Extracted text from structured response:",
+                    responseText
+                );
+            } else {
+                // Fallback to the standard text() method
+                responseText = result.response.text();
+            }
             console.log("Sending response text to frontend:", responseText);
         } catch (error) {
             console.error("Error getting response text:", error);
@@ -316,11 +344,15 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
         let convertedImageUrl = "";
 
         try {
+            // Upload original sketch
             console.log("Uploading original sketch to image host...");
             originalImageUrl = await uploadToFreeImageHost(fileBase64);
 
-            console.log("Uploading converted art to image host...");
-            convertedImageUrl = await uploadToFreeImageHost(imageData);
+            // Only upload converted art if we have an image
+            if (hasImage && imageData) {
+                console.log("Uploading converted art to image host...");
+                convertedImageUrl = await uploadToFreeImageHost(imageData);
+            }
 
             // Save to database
             const historyItem = new ImageHistory({
@@ -339,15 +371,28 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
             // Continue even if upload fails
         }
 
-        // Return the image data and text to the client
-        res.json({
-            success: true,
-            imageData: `data:${inlineData.mimeType};base64,${imageData}`,
-            responseText: responseText,
-            originalImageUrl,
-            convertedImageUrl,
-            message: "Sketch converted successfully",
-        });
+        // Return the response to the client
+        if (hasImage && imageData && inlineData) {
+            // Return both image and text
+            res.json({
+                success: true,
+                imageData: `data:${inlineData.mimeType};base64,${imageData}`,
+                responseText: responseText,
+                originalImageUrl,
+                convertedImageUrl,
+                message: "Sketch converted successfully",
+                hasImage: true,
+            });
+        } else {
+            // Return text-only response
+            res.json({
+                success: true,
+                responseText: responseText,
+                originalImageUrl,
+                message: "Received text response from AI",
+                hasImage: false,
+            });
+        }
     } catch (error) {
         console.error("Error processing sketch:", error);
 
