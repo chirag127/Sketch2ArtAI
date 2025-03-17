@@ -7,7 +7,6 @@ const imageHistorySchema = new mongoose.Schema({
     },
     convertedImageUrl: {
         type: String,
-        required: true,
     },
     style: {
         type: String,
