@@ -119,6 +119,7 @@ router.post("/verify", async (req, res) => {
                 id: user._id,
                 email: user.email,
                 isVerified: user.isVerified,
+                isAdmin: user.isAdmin,
             },
         });
     } catch (error) {
@@ -229,6 +230,7 @@ router.post("/login", async (req, res) => {
                 id: user._id,
                 email: user.email,
                 isVerified: user.isVerified,
+                isAdmin: user.isAdmin,
             },
         });
     } catch (error) {
@@ -245,6 +247,7 @@ router.get("/me", auth, async (req, res) => {
                 id: req.user._id,
                 email: req.user.email,
                 isVerified: req.user.isVerified,
+                isAdmin: req.user.isAdmin,
             },
         });
     } catch (error) {

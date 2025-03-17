@@ -16,6 +16,7 @@ const User = require("./models/User");
 
 // Import middleware
 const auth = require("./middleware/auth");
+const admin = require("./middleware/admin");
 
 // Import routes
 const authRoutes = require("./routes/auth");
@@ -490,6 +491,23 @@ app.get("/api/history", auth, async (req, res) => {
         console.error("Error fetching history:", error);
         res.status(500).json({
             error: "Failed to fetch history",
+            details: error.message,
+        });
+    }
+});
+
+// API endpoint for admin to get all users' history
+app.get("/api/admin/history", auth, admin, async (req, res) => {
+    try {
+        const history = await ImageHistory.find({})
+            .sort({ createdAt: -1 })
+            .populate("user", "email")
+            .limit(100);
+        res.json(history);
+    } catch (error) {
+        console.error("Error fetching admin history:", error);
+        res.status(500).json({
+            error: "Failed to fetch admin history",
             details: error.message,
         });
     }

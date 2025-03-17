@@ -8,6 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import HomeScreen from "./screens/HomeScreen";
 import BasicCanvasScreen from "./screens/BasicCanvasScreen";
 import HistoryScreen from "./screens/HistoryScreen";
+import AdminHistoryScreen from "./screens/AdminHistoryScreen";
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
 import VerifyEmailScreen from "./screens/VerifyEmailScreen";
@@ -50,7 +51,7 @@ function MainTabs() {
             />
             <Tab.Screen
                 name="HistoryTab"
-                component={HistoryScreen}
+                component={HistoryStack}
                 options={{ title: "History" }}
             />
             <Tab.Screen
@@ -75,6 +76,33 @@ function HomeStack() {
                 name="Canvas"
                 component={BasicCanvasScreen}
                 options={{ headerShown: false }}
+            />
+        </Stack.Navigator>
+    );
+}
+
+// History stack navigator
+function HistoryStack() {
+    return (
+        <Stack.Navigator initialRouteName="History">
+            <Stack.Screen
+                name="History"
+                component={HistoryScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="AdminHistory"
+                component={AdminHistoryScreen}
+                options={{
+                    title: "Admin History",
+                    headerStyle: {
+                        backgroundColor: "#4a90e2",
+                    },
+                    headerTintColor: "#fff",
+                    headerTitleStyle: {
+                        fontWeight: "bold",
+                    },
+                }}
             />
         </Stack.Navigator>
     );

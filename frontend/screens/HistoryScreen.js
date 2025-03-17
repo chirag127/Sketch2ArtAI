@@ -19,7 +19,7 @@ import Markdown from "react-native-markdown-display";
 import * as FileSystem from "expo-file-system";
 
 export default function HistoryScreen({ navigation }) {
-    const { userToken } = useContext(AuthContext);
+    const { userToken, userInfo } = useContext(AuthContext);
 
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -274,7 +274,17 @@ export default function HistoryScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Conversion History</Text>
+            <View style={styles.headerContainer}>
+                <Text style={styles.title}>Conversion History</Text>
+                {userInfo && userInfo.isAdmin && (
+                    <TouchableOpacity
+                        style={styles.adminButton}
+                        onPress={() => navigation.navigate("AdminHistory")}
+                    >
+                        <Text style={styles.adminButtonText}>Admin View</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
 
             {history.length === 0 ? (
                 <View style={styles.emptyContainer}>
@@ -313,6 +323,26 @@ const styles = StyleSheet.create({
         textAlign: "center",
         marginTop: 40,
         marginBottom: 20,
+    },
+    headerContainer: {
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 20,
+        position: "relative",
+    },
+    adminButton: {
+        position: "absolute",
+        right: 0,
+        backgroundColor: "#ff6b6b",
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+    },
+    adminButtonText: {
+        color: "white",
+        fontSize: 14,
+        fontWeight: "bold",
     },
     loadingContainer: {
         flex: 1,
