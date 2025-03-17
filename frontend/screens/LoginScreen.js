@@ -51,8 +51,16 @@ export default function LoginScreen({ navigation }) {
         try {
             const result = await login(email, password);
 
-            if (!result.success) {
+            if (result.success) {
+                // On successful login, we don't need to navigate manually
+                // The AuthContext will update userToken which triggers navigation in App.js
+                console.log("Login successful");
+                // Small delay to ensure UI stability before auth state changes
+                await new Promise((resolve) => setTimeout(resolve, 300));
+            } else {
                 if (result.needsVerification) {
+                    // Add a small delay before navigation to prevent UI glitches
+                    await new Promise((resolve) => setTimeout(resolve, 300));
                     navigation.navigate("VerifyEmail");
                 } else {
                     Alert.alert("Login Failed", result.error);
@@ -71,10 +79,15 @@ export default function LoginScreen({ navigation }) {
 
     return (
         <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
             style={styles.container}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
         >
-            <ScrollView contentContainerStyle={styles.scrollContainer}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContainer}
+                keyboardShouldPersistTaps="handled"
+                bounces={false}
+            >
                 <View
                     style={[
                         styles.formContainer,
@@ -116,12 +129,15 @@ export default function LoginScreen({ navigation }) {
                         ]}
                         onPress={handleLogin}
                         disabled={isSubmitting || isLoading}
+                        activeOpacity={0.7} // Reduce flash effect on press
                     >
-                        {isSubmitting || isLoading ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <Text style={styles.buttonText}>Login</Text>
-                        )}
+                        <View style={{ height: 24, justifyContent: "center" }}>
+                            {isSubmitting || isLoading ? (
+                                <ActivityIndicator color="#fff" size="small" />
+                            ) : (
+                                <Text style={styles.buttonText}>Login</Text>
+                            )}
+                        </View>
                     </TouchableOpacity>
 
                     <View style={styles.registerContainer}>
@@ -149,6 +165,7 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         justifyContent: "center",
         alignItems: "center", // Center content horizontally
+        minHeight: Dimensions.get("window").height - 50, // Ensure minimum height to prevent layout shifts
     },
     formContainer: {
         padding: 20,
@@ -199,8 +216,10 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         borderRadius: 8,
         alignItems: "center",
+        justifyContent: "center",
         marginTop: 10,
         width: "100%",
+        minHeight: 50, // Fixed height to prevent layout shifts during loading state
     },
     disabledButton: {
         backgroundColor: "#a0c4e9",

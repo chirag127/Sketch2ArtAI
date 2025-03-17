@@ -136,6 +136,9 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         setIsLoading(true);
         try {
+            // Add a small delay to ensure UI stability
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
             const response = await axios.post(`${API_URL}/auth/login`, {
                 email,
                 password,
@@ -145,6 +148,8 @@ export const AuthProvider = ({ children }) => {
             if (response.data.needsVerification) {
                 setIsVerifying(true);
                 setVerificationEmail(email);
+                // Small delay before returning to ensure UI stability
+                await new Promise((resolve) => setTimeout(resolve, 100));
                 return {
                     success: false,
                     needsVerification: true,
@@ -158,6 +163,9 @@ export const AuthProvider = ({ children }) => {
             await AsyncStorage.setItem("userToken", token);
             await AsyncStorage.setItem("userInfo", JSON.stringify(user));
 
+            // Small delay before updating state to ensure UI stability
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
             // Update state
             setUserToken(token);
             setUserInfo(user);
@@ -168,6 +176,8 @@ export const AuthProvider = ({ children }) => {
             return { success: true };
         } catch (error) {
             console.log("Login error:", error.response?.data || error.message);
+            // Small delay before returning error to ensure UI stability
+            await new Promise((resolve) => setTimeout(resolve, 100));
             return {
                 success: false,
                 error:
@@ -175,6 +185,8 @@ export const AuthProvider = ({ children }) => {
                     "Login failed. Please check your credentials.",
             };
         } finally {
+            // Small delay before setting loading to false to ensure UI stability
+            await new Promise((resolve) => setTimeout(resolve, 100));
             setIsLoading(false);
         }
     };
