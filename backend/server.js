@@ -170,7 +170,7 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
         }
 
         const generationConfig = {
-            temperature: 0.9,
+            temperature: 1,
             topP: 0.95,
             topK: 40,
             maxOutputTokens: 8192,
