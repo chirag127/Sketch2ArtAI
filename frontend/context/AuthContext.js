@@ -181,20 +181,28 @@ export const AuthProvider = ({ children }) => {
 
     // Logout user
     const logout = async () => {
+        console.log("Logout function called");
         setIsLoading(true);
         try {
+            console.log("Removing auth data from storage");
             // Remove auth data from storage
             await AsyncStorage.removeItem("userToken");
             await AsyncStorage.removeItem("userInfo");
 
+            console.log("Updating state");
             // Update state
             setUserToken(null);
             setUserInfo(null);
 
+            console.log("Removing auth header");
             // Remove auth header
             delete axios.defaults.headers.common["Authorization"];
+
+            console.log("Logout completed successfully");
+            return true; // Return success status
         } catch (error) {
-            console.log("Logout error:", error);
+            console.error("Logout error:", error);
+            throw error; // Rethrow the error to be caught by the caller
         } finally {
             setIsLoading(false);
         }

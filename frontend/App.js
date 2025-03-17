@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, ActivityIndicator, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
@@ -98,7 +98,17 @@ function AuthStack() {
 function AppContainer() {
     const { isLoading, userToken, isVerifying } = useContext(AuthContext);
 
+    // Add debugging for auth state changes
+    useEffect(() => {
+        console.log("AppContainer: Auth state changed", {
+            userToken,
+            isVerifying,
+            isLoading,
+        });
+    }, [userToken, isVerifying, isLoading]);
+
     if (isLoading) {
+        console.log("AppContainer: Showing loading screen");
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#4a90e2" />
@@ -106,21 +116,30 @@ function AppContainer() {
         );
     }
 
+    // Determine which screen to show based on auth state
+    let screenToShow;
+    if (userToken) {
+        console.log("AppContainer: Showing MainTabs - User is logged in");
+        screenToShow = <MainTabs />;
+    } else if (isVerifying) {
+        console.log("AppContainer: Showing VerifyEmail screen");
+        screenToShow = (
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+                <Stack.Screen
+                    name="VerifyEmail"
+                    component={VerifyEmailScreen}
+                />
+            </Stack.Navigator>
+        );
+    } else {
+        console.log("AppContainer: Showing AuthStack - User is logged out");
+        screenToShow = <AuthStack />;
+    }
+
     return (
         <NavigationContainer>
             <StatusBar style="auto" />
-            {userToken ? (
-                <MainTabs />
-            ) : isVerifying ? (
-                <Stack.Navigator screenOptions={{ headerShown: false }}>
-                    <Stack.Screen
-                        name="VerifyEmail"
-                        component={VerifyEmailScreen}
-                    />
-                </Stack.Navigator>
-            ) : (
-                <AuthStack />
-            )}
+            {screenToShow}
         </NavigationContainer>
     );
 }

@@ -13,17 +13,11 @@ import AuthContext from "../context/AuthContext";
 export default function ProfileScreen({ navigation }) {
     const { userInfo, logout, isLoading } = useContext(AuthContext);
 
+
+
     const handleLogout = async () => {
-        Alert.alert("Confirm Logout", "Are you sure you want to logout?", [
-            { text: "Cancel", style: "cancel" },
-            {
-                text: "Logout",
-                onPress: async () => {
-                    await logout();
-                },
-                style: "destructive",
-            },
-        ]);
+        console.log("Attempting to logout");
+        await logout();
     };
 
     return (
@@ -111,11 +105,16 @@ export default function ProfileScreen({ navigation }) {
             </View>
 
             <TouchableOpacity
-                style={styles.logoutButton}
+                style={[
+                    styles.logoutButton,
+                    isLoading && styles.disabledButton,
+                ]}
                 onPress={handleLogout}
                 disabled={isLoading}
             >
-                <Text style={styles.logoutButtonText}>Logout</Text>
+                <Text style={styles.logoutButtonText}>
+                    {isLoading ? "Logging out..." : "Logout"}
+                </Text>
             </TouchableOpacity>
 
             <View style={styles.versionContainer}>
@@ -228,5 +227,9 @@ const styles = StyleSheet.create({
     versionText: {
         color: "#999",
         fontSize: 14,
+    },
+    disabledButton: {
+        backgroundColor: "#cccccc",
+        opacity: 0.7,
     },
 });
