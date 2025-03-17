@@ -95,6 +95,9 @@ export default function LoginScreen({ navigation }) {
                     ]}
                 >
                     <Text style={styles.title}>Sketch2ArtAI</Text>
+                    <Text style={styles.description}>
+                        Transform your sketches into beautiful artwork using AI
+                    </Text>
                     <Text style={styles.subtitle}>Login to your account</Text>
 
                     <View style={styles.inputContainer}>
@@ -187,6 +190,14 @@ const styles = StyleSheet.create({
         color: "#333",
         textAlign: "center",
         marginBottom: 10,
+    },
+    description: {
+        fontSize: 16,
+        color: "#4a90e2",
+        textAlign: "center",
+        marginBottom: 15,
+        fontStyle: "italic",
+        paddingHorizontal: 10,
     },
     subtitle: {
         fontSize: 16,
