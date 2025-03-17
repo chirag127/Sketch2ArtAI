@@ -38,7 +38,7 @@ netlify deploy --dir dist
 
     ```
     # If using Netlify CLI
-    netlify deploy --prod --dir frontend/web-build
+    netlify deploy --prod --dir frontend/dist
     ```
 
     Alternatively, connect your GitHub repository to Netlify and it will automatically deploy using the netlify.toml configuration.
