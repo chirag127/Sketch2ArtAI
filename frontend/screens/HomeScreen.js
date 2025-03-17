@@ -23,10 +23,6 @@ import {
     shareImage as platformShareImage,
 } from "../utils/platformUtils";
 import axios from "axios";
-
-// Change this to your computer's IP address when testing on a physical device
-// const API_URL = "http://10.0.2.2:5000/api"; // 10.0.2.2 is the special IP for Android emulator to access host
-
 import { API_URL } from "../env";
 
 export default function HomeScreen({ navigation, route }) {
