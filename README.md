@@ -43,6 +43,14 @@ netlify deploy --dir dist
 
     Alternatively, connect your GitHub repository to Netlify and it will automatically deploy using the netlify.toml configuration.
 
+## Netlify Deployment Information
+
+Build logs:         https://app.netlify.com/sites/sketch2artai/deploys/67d96dd94ce0b4890eeca2c6
+Function logs:      https://app.netlify.com/sites/sketch2artai/logs/functions
+Edge function Logs: https://app.netlify.com/sites/sketch2artai/logs/edge-functions
+Unique deploy URL:  https://67d96dd94ce0b4890eeca2c6--sketch2artai.netlify.app
+Website URL:        https://sketch2artai.netlify.app
+
 ## Features
 
 -   Take photos or select sketches from your gallery
