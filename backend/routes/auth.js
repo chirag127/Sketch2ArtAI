@@ -259,4 +259,100 @@ router.get("/me", auth, async (req, res) => {
     }
 });
 
+// Forgot password - send reset code
+router.post("/forgot-password", async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // Validate input
+        if (!email) {
+            return res.status(400).json({ error: "Email is required" });
+        }
+
+        // Find user
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // Generate reset password code (different from verification code)
+        const resetPasswordCode = generateResetPasswordCode();
+        const resetPasswordCodeExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+        // Update user
+        user.resetPasswordCode = resetPasswordCode;
+        user.resetPasswordCodeExpires = resetPasswordCodeExpires;
+        await user.save();
+
+        // Send password reset email
+        const emailHtml = `
+            <h1>Password Reset</h1>
+            <p>You requested a password reset for your Sketch2ArtAI account. Please use the following code to reset your password:</p>
+            <h2>${resetPasswordCode}</h2>
+            <p>This code will expire in 30 minutes.</p>
+            <p>If you didn't request this, you can safely ignore this email.</p>
+        `;
+
+        await sendEmail(email, "Password Reset - Sketch2ArtAI", emailHtml);
+
+        res.json({
+            message:
+                "Password reset code sent successfully. Please check your email.",
+        });
+    } catch (error) {
+        console.error("Forgot password error:", error);
+        res.status(500).json({
+            error: "Failed to process password reset request",
+            details: error.message,
+        });
+    }
+});
+
+// Reset password with reset code
+router.post("/reset-password", async (req, res) => {
+    try {
+        const { email, code, newPassword } = req.body;
+
+        // Validate input
+        if (!email || !code || !newPassword) {
+            return res.status(400).json({
+                error: "Email, reset code, and new password are required",
+            });
+        }
+
+        // Find user
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // Check reset password code
+        if (user.resetPasswordCode !== code) {
+            return res.status(400).json({ error: "Invalid reset code" });
+        }
+
+        // Check if code is expired
+        if (user.resetPasswordCodeExpires < new Date()) {
+            return res.status(400).json({ error: "Reset code expired" });
+        }
+
+        // Update password
+        user.password = newPassword;
+        user.resetPasswordCode = undefined;
+        user.resetPasswordCodeExpires = undefined;
+        await user.save();
+
+        res.json({
+            message:
+                "Password reset successfully. You can now login with your new password.",
+        });
+    } catch (error) {
+        console.error("Reset password error:", error);
+        res.status(500).json({
+            error: "Failed to reset password",
+            details: error.message,
+        });
+    }
+});
+
 module.exports = router;

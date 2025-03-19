@@ -14,13 +14,12 @@ import {
 } from "react-native";
 import AuthContext from "../context/AuthContext";
 
-export default function LoginScreen({ navigation }) {
+export default function ForgotPasswordScreen({ navigation }) {
     const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDesktop, setIsDesktop] = useState(false);
 
-    const { login, isLoading } = useContext(AuthContext);
+    const { forgotPassword, isLoading } = useContext(AuthContext);
 
     // Check if the device is a desktop based on screen width
     useEffect(() => {
@@ -41,33 +40,25 @@ export default function LoginScreen({ navigation }) {
         };
     }, []);
 
-    const handleLogin = async () => {
-        if (!email || !password) {
-            Alert.alert("Error", "Please enter both email and password");
+    const handleForgotPassword = async () => {
+        if (!email) {
+            Alert.alert("Error", "Please enter your email");
             return;
         }
 
         setIsSubmitting(true);
         try {
-            const result = await login(email, password);
+            const result = await forgotPassword(email);
 
             if (result.success) {
-                // On successful login, we don't need to navigate manually
-                // The AuthContext will update userToken which triggers navigation in App.js
-                console.log("Login successful");
-                // Small delay to ensure UI stability before auth state changes
+                // Add a small delay before navigation to prevent UI glitches
                 await new Promise((resolve) => setTimeout(resolve, 300));
+                navigation.navigate("ResetPassword");
             } else {
-                if (result.needsVerification) {
-                    // Add a small delay before navigation to prevent UI glitches
-                    await new Promise((resolve) => setTimeout(resolve, 300));
-                    navigation.navigate("VerifyEmail");
-                } else {
-                    Alert.alert("Login Failed", result.error);
-                }
+                Alert.alert("Request Failed", result.error);
             }
         } catch (error) {
-            console.log("Login error:", error);
+            console.log("Forgot password error:", error);
             Alert.alert(
                 "Error",
                 "An unexpected error occurred. Please try again."
@@ -94,11 +85,11 @@ export default function LoginScreen({ navigation }) {
                         isDesktop && { maxWidth: 450 },
                     ]}
                 >
-                    <Text style={styles.title}>Sketch2ArtAI</Text>
+                    <Text style={styles.title}>Forgot Password</Text>
                     <Text style={styles.description}>
-                        Transform your sketches into beautiful artwork using AI
+                        Enter your email address and we'll send you a reset code
+                        to reset your password.
                     </Text>
-                    <Text style={styles.subtitle}>Login to your account</Text>
 
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Email</Text>
@@ -113,34 +104,13 @@ export default function LoginScreen({ navigation }) {
                         />
                     </View>
 
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Password</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Enter your password"
-                            value={password}
-                            onChangeText={setPassword}
-                            secureTextEntry
-                        />
-                        <TouchableOpacity
-                            style={styles.forgotPasswordContainer}
-                            onPress={() =>
-                                navigation.navigate("ForgotPassword")
-                            }
-                        >
-                            <Text style={styles.forgotPasswordText}>
-                                Forgot Password?
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-
                     <TouchableOpacity
                         style={[
                             styles.button,
                             (isSubmitting || isLoading) &&
                                 styles.disabledButton,
                         ]}
-                        onPress={handleLogin}
+                        onPress={handleForgotPassword}
                         disabled={isSubmitting || isLoading}
                         activeOpacity={0.7} // Reduce flash effect on press
                     >
@@ -148,21 +118,19 @@ export default function LoginScreen({ navigation }) {
                             {isSubmitting || isLoading ? (
                                 <ActivityIndicator color="#fff" size="small" />
                             ) : (
-                                <Text style={styles.buttonText}>Login</Text>
+                                <Text style={styles.buttonText}>
+                                    Send Reset Code
+                                </Text>
                             )}
                         </View>
                     </TouchableOpacity>
 
-                    <View style={styles.registerContainer}>
-                        <Text style={styles.registerText}>
-                            Don't have an account?
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate("Register")}
-                        >
-                            <Text style={styles.registerLink}>Register</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => navigation.navigate("Login")}
+                    >
+                        <Text style={styles.backButtonText}>Back to Login</Text>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>
@@ -203,17 +171,10 @@ const styles = StyleSheet.create({
     },
     description: {
         fontSize: 16,
-        color: "#4a90e2",
-        textAlign: "center",
-        marginBottom: 15,
-        fontStyle: "italic",
-        paddingHorizontal: 10,
-    },
-    subtitle: {
-        fontSize: 16,
         color: "#666",
         textAlign: "center",
         marginBottom: 30,
+        lineHeight: 22,
     },
     inputContainer: {
         marginBottom: 20,
@@ -250,26 +211,12 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "bold",
     },
-    registerContainer: {
-        flexDirection: "row",
-        justifyContent: "center",
+    backButton: {
         marginTop: 20,
+        paddingVertical: 12,
+        alignItems: "center",
     },
-    registerText: {
-        color: "#666",
-        fontSize: 14,
-    },
-    registerLink: {
-        color: "#4a90e2",
-        fontSize: 14,
-        fontWeight: "bold",
-        marginLeft: 5,
-    },
-    forgotPasswordContainer: {
-        alignItems: "flex-end",
-        marginTop: 8,
-    },
-    forgotPasswordText: {
+    backButtonText: {
         color: "#4a90e2",
         fontSize: 14,
         fontWeight: "500",

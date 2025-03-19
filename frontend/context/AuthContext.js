@@ -220,6 +220,68 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Forgot password - request reset code
+    const forgotPassword = async (email) => {
+        setIsLoading(true);
+        try {
+            const response = await axios.post(
+                `${API_URL}/auth/forgot-password`,
+                {
+                    email,
+                }
+            );
+
+            setIsVerifying(true);
+            setVerificationEmail(email);
+            return { success: true, message: response.data.message };
+        } catch (error) {
+            console.log(
+                "Forgot password error:",
+                error.response?.data || error.message
+            );
+            return {
+                success: false,
+                error:
+                    error.response?.data?.error ||
+                    "Failed to process password reset request. Please try again.",
+            };
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Reset password with verification code
+    const resetPassword = async (email, code, newPassword) => {
+        setIsLoading(true);
+        try {
+            const response = await axios.post(
+                `${API_URL}/auth/reset-password`,
+                {
+                    email,
+                    code,
+                    newPassword,
+                }
+            );
+
+            setIsVerifying(false);
+            setVerificationEmail("");
+            return { success: true, message: response.data.message };
+        } catch (error) {
+            console.log(
+                "Reset password error:",
+                error.response?.data || error.message
+            );
+            return {
+                success: false,
+                error:
+                    error.response?.data?.error ||
+                    "Failed to reset password. Please try again.",
+            };
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <AuthContext.Provider
             value={{
@@ -233,6 +295,8 @@ export const AuthProvider = ({ children }) => {
                 logout,
                 verifyEmail,
                 resendVerificationCode,
+                forgotPassword,
+                resetPassword,
                 setIsVerifying,
                 setVerificationEmail,
             }}
