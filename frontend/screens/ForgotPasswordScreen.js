@@ -56,16 +56,18 @@ export default function ForgotPasswordScreen({ navigation }) {
 
             if (result.success) {
                 console.log(
-                    "Reset code sent successfully, navigating to ResetPassword"
+                    "Reset code sent successfully, preparing to navigate to ResetPassword"
                 );
-                // Add a small delay before navigation to prevent UI glitches
-                await new Promise((resolve) => setTimeout(resolve, 300));
 
                 // Ensure verificationEmail is set in context
                 setVerificationEmail(email);
                 setIsVerifying(true);
 
-                navigation.navigate("ResetPassword");
+                // Add a small delay before navigation to ensure context is updated
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                console.log("Navigating to ResetPassword with email:", email);
+                navigation.navigate("ResetPassword", { email: email });
             } else {
                 console.log("Reset code request failed:", result.error);
                 Alert.alert("Request Failed", result.error);
@@ -141,12 +143,31 @@ export default function ForgotPasswordScreen({ navigation }) {
                     <TouchableOpacity
                         style={styles.haveCodeButton}
                         onPress={() => {
+                            console.log(
+                                "Already have a reset code button pressed"
+                            );
                             // Set verification email if available
                             if (email) {
+                                console.log(
+                                    "Setting verification email:",
+                                    email
+                                );
                                 setVerificationEmail(email);
                                 setIsVerifying(true);
+
+                                // Add a small delay to ensure context is updated
+                                setTimeout(() => {
+                                    console.log(
+                                        "Navigating to ResetPassword with email:",
+                                        email
+                                    );
+                                    navigation.navigate("ResetPassword", {
+                                        email: email,
+                                    });
+                                }, 300);
+                            } else {
+                                navigation.navigate("ResetPassword");
                             }
-                            navigation.navigate("ResetPassword");
                         }}
                     >
                         <Text style={styles.haveCodeText}>

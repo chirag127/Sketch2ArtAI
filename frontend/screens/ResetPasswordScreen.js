@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import AuthContext from "../context/AuthContext";
 
-export default function ResetPasswordScreen({ navigation }) {
+export default function ResetPasswordScreen({ navigation, route }) {
     const [verificationCode, setVerificationCode] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -32,6 +32,31 @@ export default function ResetPasswordScreen({ navigation }) {
         setIsVerifying,
         setVerificationEmail,
     } = useContext(AuthContext);
+
+    // Handle email from route params and set it if verificationEmail is not set
+    useEffect(() => {
+        console.log("ResetPasswordScreen - route params:", route?.params);
+        console.log(
+            "ResetPasswordScreen - verificationEmail:",
+            verificationEmail
+        );
+
+        // If email is passed via route params and verificationEmail is not set
+        if (route?.params?.email && !verificationEmail) {
+            console.log(
+                "Setting verificationEmail from route params:",
+                route.params.email
+            );
+            setLocalEmail(route.params.email);
+            setVerificationEmail(route.params.email);
+            setIsVerifying(true);
+        }
+    }, [
+        route?.params,
+        verificationEmail,
+        setVerificationEmail,
+        setIsVerifying,
+    ]);
 
     useEffect(() => {
         if (countdown > 0) {
@@ -80,6 +105,18 @@ export default function ResetPasswordScreen({ navigation }) {
         if (!verificationEmail && !localEmail) {
             Alert.alert("Error", "Please enter your email address");
             return;
+        }
+
+        // If we're using localEmail, make sure to update the context
+        if (!verificationEmail && localEmail) {
+            console.log(
+                "Setting verificationEmail from localEmail:",
+                localEmail
+            );
+            setVerificationEmail(localEmail);
+            setIsVerifying(true);
+            // Add a small delay to ensure context is updated
+            await new Promise((resolve) => setTimeout(resolve, 300));
         }
 
         setIsSubmitting(true);
