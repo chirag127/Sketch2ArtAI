@@ -19,7 +19,8 @@ export default function ForgotPasswordScreen({ navigation }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDesktop, setIsDesktop] = useState(false);
 
-    const { forgotPassword, isLoading } = useContext(AuthContext);
+    const { forgotPassword, isLoading, setVerificationEmail, setIsVerifying } =
+        useContext(AuthContext);
 
     // Check if the device is a desktop based on screen width
     useEffect(() => {
@@ -46,19 +47,31 @@ export default function ForgotPasswordScreen({ navigation }) {
             return;
         }
 
+        console.log("Attempting to send reset code to:", email);
         setIsSubmitting(true);
         try {
+            console.log("Calling forgotPassword function...");
             const result = await forgotPassword(email);
+            console.log("forgotPassword result:", result);
 
             if (result.success) {
+                console.log(
+                    "Reset code sent successfully, navigating to ResetPassword"
+                );
                 // Add a small delay before navigation to prevent UI glitches
                 await new Promise((resolve) => setTimeout(resolve, 300));
+
+                // Ensure verificationEmail is set in context
+                setVerificationEmail(email);
+                setIsVerifying(true);
+
                 navigation.navigate("ResetPassword");
             } else {
+                console.log("Reset code request failed:", result.error);
                 Alert.alert("Request Failed", result.error);
             }
         } catch (error) {
-            console.log("Forgot password error:", error);
+            console.error("Forgot password error:", error);
             Alert.alert(
                 "Error",
                 "An unexpected error occurred. Please try again."
@@ -123,6 +136,22 @@ export default function ForgotPasswordScreen({ navigation }) {
                                 </Text>
                             )}
                         </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.haveCodeButton}
+                        onPress={() => {
+                            // Set verification email if available
+                            if (email) {
+                                setVerificationEmail(email);
+                                setIsVerifying(true);
+                            }
+                            navigation.navigate("ResetPassword");
+                        }}
+                    >
+                        <Text style={styles.haveCodeText}>
+                            Already have a reset code?
+                        </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -220,5 +249,16 @@ const styles = StyleSheet.create({
         color: "#4a90e2",
         fontSize: 14,
         fontWeight: "500",
+    },
+    haveCodeButton: {
+        marginTop: 15,
+        paddingVertical: 10,
+        alignItems: "center",
+    },
+    haveCodeText: {
+        color: "#4a90e2",
+        fontSize: 14,
+        fontWeight: "500",
+        textDecorationLine: "underline",
     },
 });

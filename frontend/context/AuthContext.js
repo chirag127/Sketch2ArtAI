@@ -222,6 +222,9 @@ export const AuthProvider = ({ children }) => {
 
     // Forgot password - request reset code
     const forgotPassword = async (email) => {
+        console.log(
+            `Sending forgot password request to ${API_URL}/auth/forgot-password for email: ${email}`
+        );
         setIsLoading(true);
         try {
             const response = await axios.post(
@@ -231,20 +234,43 @@ export const AuthProvider = ({ children }) => {
                 }
             );
 
+            console.log("Forgot password response:", response.data);
             setIsVerifying(true);
             setVerificationEmail(email);
             return { success: true, message: response.data.message };
         } catch (error) {
-            console.log(
-                "Forgot password error:",
-                error.response?.data || error.message
-            );
-            return {
-                success: false,
-                error:
-                    error.response?.data?.error ||
-                    "Failed to process password reset request. Please try again.",
-            };
+            console.error("Forgot password error details:", {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+                headers: error.response?.headers,
+                config: error.config,
+            });
+
+            // More specific error handling
+            if (error.response) {
+                // The request was made and the server responded with a status code
+                // that falls out of the range of 2xx
+                return {
+                    success: false,
+                    error:
+                        error.response.data?.error ||
+                        `Server error: ${error.response.status}`,
+                };
+            } else if (error.request) {
+                // The request was made but no response was received
+                console.error("No response received:", error.request);
+                return {
+                    success: false,
+                    error: "No response from server. Please check your internet connection and try again.",
+                };
+            } else {
+                // Something happened in setting up the request that triggered an Error
+                return {
+                    success: false,
+                    error: "Failed to process password reset request. Please try again.",
+                };
+            }
         } finally {
             setIsLoading(false);
         }

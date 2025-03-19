@@ -22,6 +22,7 @@ export default function ResetPasswordScreen({ navigation }) {
     const [isDesktop, setIsDesktop] = useState(false);
     const [resendDisabled, setResendDisabled] = useState(false);
     const [countdown, setCountdown] = useState(0);
+    const [localEmail, setLocalEmail] = useState("");
 
     const {
         resetPassword,
@@ -76,18 +77,18 @@ export default function ResetPasswordScreen({ navigation }) {
             return;
         }
 
-        if (!verificationEmail) {
-            Alert.alert(
-                "Error",
-                "Email information is missing. Please go back to forgot password."
-            );
+        if (!verificationEmail && !localEmail) {
+            Alert.alert("Error", "Please enter your email address");
             return;
         }
 
         setIsSubmitting(true);
         try {
+            // Use verificationEmail if available, otherwise use localEmail
+            const emailToUse = verificationEmail || localEmail;
+
             const result = await resetPassword(
-                verificationEmail,
+                emailToUse,
                 verificationCode,
                 newPassword
             );
@@ -114,19 +115,25 @@ export default function ResetPasswordScreen({ navigation }) {
     };
 
     const handleResendCode = async () => {
-        if (!verificationEmail) {
-            Alert.alert(
-                "Error",
-                "Email information is missing. Please go back to forgot password."
-            );
+        if (!verificationEmail && !localEmail) {
+            Alert.alert("Error", "Please enter your email address");
             return;
         }
+
+        // Use verificationEmail if available, otherwise use localEmail
+        const emailToUse = verificationEmail || localEmail;
 
         setResendDisabled(true);
         setCountdown(60); // 60 seconds cooldown
 
         try {
-            const result = await forgotPassword(verificationEmail);
+            const result = await forgotPassword(emailToUse);
+
+            // If using localEmail, update the verificationEmail in context
+            if (!verificationEmail && localEmail) {
+                setVerificationEmail(localEmail);
+                setIsVerifying(true);
+            }
 
             if (result.success) {
                 Alert.alert(
@@ -169,9 +176,25 @@ export default function ResetPasswordScreen({ navigation }) {
                 >
                     <Text style={styles.title}>Reset Your Password</Text>
                     <Text style={styles.subtitle}>
-                        We've sent a reset code to {verificationEmail}. Please
-                        enter the code and your new password below.
+                        {verificationEmail
+                            ? `We've sent a reset code to ${verificationEmail}. Please enter the code and your new password below.`
+                            : `Please enter your email, the reset code you received, and your new password below.`}
                     </Text>
+
+                    {!verificationEmail && (
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Email</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Enter your email"
+                                value={localEmail}
+                                onChangeText={setLocalEmail}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                            />
+                        </View>
+                    )}
 
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Reset Code</Text>
