@@ -144,9 +144,6 @@ export const AuthProvider = ({ children }) => {
         let loginResult = { success: false, error: null };
 
         try {
-            // Don't set isLoading for failed login attempts
-            // This prevents screen reloads when there's an error
-
             // Make the API call to login
             const response = await axios.post(`${API_URL}/auth/login`, {
                 email,
@@ -165,7 +162,7 @@ export const AuthProvider = ({ children }) => {
                 };
             }
 
-            // Only set loading state for successful login
+            // Set loading state for successful login
             setIsLoading(true);
 
             const { token, user } = response.data;
@@ -180,6 +177,11 @@ export const AuthProvider = ({ children }) => {
 
             // Set auth header for all future requests
             axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+            // Reset loading state after a short delay to allow navigation to occur
+            setTimeout(() => {
+                setIsLoading(false);
+            }, 500);
 
             loginResult = { success: true };
         } catch (error) {

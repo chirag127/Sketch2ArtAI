@@ -73,7 +73,9 @@ export default function LoginScreen({ navigation }) {
     // Use a memoized callback to prevent unnecessary re-renders
     const handleLogin = async (event) => {
         // Prevent default form submission behavior
-        event?.preventDefault?.();
+        if (event && event.preventDefault) {
+            event.preventDefault();
+        }
 
         // Clear any previous error messages
         setErrorMessage("");
@@ -92,6 +94,13 @@ export default function LoginScreen({ navigation }) {
                 // On successful login, we don't need to navigate manually
                 // The AuthContext will update userToken which triggers navigation in App.js
                 console.log("Login successful");
+
+                // Set a timeout to reset isSubmitting in case the navigation doesn't happen
+                setTimeout(() => {
+                    setIsSubmitting(false);
+                }, 3000); // 3 seconds timeout as a fallback
+
+                return; // Exit early to keep spinner showing during navigation
             } else if (result.needsVerification) {
                 // The AuthContext will handle setting isVerifying state
                 // No need to navigate manually as App.js will handle it based on isVerifying state
@@ -190,15 +199,14 @@ export default function LoginScreen({ navigation }) {
                     <TouchableOpacity
                         style={[
                             styles.button,
-                            (isSubmitting || isLoading) &&
-                                styles.disabledButton,
+                            isSubmitting && styles.disabledButton,
                         ]}
                         onPress={(e) => handleLogin(e)}
-                        disabled={isSubmitting || isLoading}
+                        disabled={isSubmitting}
                         activeOpacity={0.7} // Reduce flash effect on press
                     >
                         <View style={{ height: 24, justifyContent: "center" }}>
-                            {isSubmitting || isLoading ? (
+                            {isSubmitting ? (
                                 <ActivityIndicator color="#fff" size="small" />
                             ) : (
                                 <Text style={styles.buttonText}>Login</Text>
