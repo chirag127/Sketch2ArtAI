@@ -14,6 +14,7 @@ import {
     Platform,
     Dimensions,
 } from "react-native";
+import { showAlert } from "../utils/dialog";
 import axios from "axios";
 import { API_URL } from "../env";
 import Markdown from "react-native-markdown-display";
@@ -40,7 +41,11 @@ export default function FeedScreen({ navigation }) {
         } catch (error) {
             console.error("Error fetching feed:", error);
             console.error("Error details:", error.response?.data);
-            Alert.alert("Error", "Failed to fetch feed. Please try again.");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Failed to fetch feed. Please try again.");
+            } else {
+                Alert.alert("Error", "Failed to fetch feed. Please try again.");
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -106,7 +111,11 @@ export default function FeedScreen({ navigation }) {
             }
         } catch (error) {
             console.error("Error sharing image:", error);
-            Alert.alert("Error", "Failed to share image");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Failed to share image");
+            } else {
+                Alert.alert("Error", "Failed to share image");
+            }
         }
     };
 
@@ -118,10 +127,17 @@ export default function FeedScreen({ navigation }) {
 
     const removeFromFeed = async (id) => {
         if (!userToken) {
-            Alert.alert(
-                "Error",
-                "You must be logged in to remove items from the feed"
-            );
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Error",
+                    "You must be logged in to remove items from the feed"
+                );
+            } else {
+                Alert.alert(
+                    "Error",
+                    "You must be logged in to remove items from the feed"
+                );
+            }
             return;
         }
 
@@ -235,7 +251,11 @@ export default function FeedScreen({ navigation }) {
                     error.response?.status === 403 ||
                     isOffline
                 ) {
-                    Alert.alert("Error", errorMessage);
+                    if (Platform.OS === "web") {
+                        showAlert("Error", errorMessage);
+                    } else {
+                        Alert.alert("Error", errorMessage);
+                    }
                 }
             }
         } finally {

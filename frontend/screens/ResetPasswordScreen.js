@@ -12,6 +12,7 @@ import {
     ScrollView,
     Dimensions,
 } from "react-native";
+import { showAlert, showConfirmDialog } from "../utils/dialog";
 import AuthContext from "../context/AuthContext";
 
 export default function ResetPasswordScreen({ navigation, route }) {
@@ -89,22 +90,38 @@ export default function ResetPasswordScreen({ navigation, route }) {
 
     const handleResetPassword = async () => {
         if (!verificationCode) {
-            Alert.alert("Error", "Please enter the verification code");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Please enter the verification code");
+            } else {
+                Alert.alert("Error", "Please enter the verification code");
+            }
             return;
         }
 
         if (!newPassword) {
-            Alert.alert("Error", "Please enter a new password");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Please enter a new password");
+            } else {
+                Alert.alert("Error", "Please enter a new password");
+            }
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            Alert.alert("Error", "Passwords do not match");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Passwords do not match");
+            } else {
+                Alert.alert("Error", "Passwords do not match");
+            }
             return;
         }
 
         if (!verificationEmail && !localEmail) {
-            Alert.alert("Error", "Please enter your email address");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Please enter your email address");
+            } else {
+                Alert.alert("Error", "Please enter your email address");
+            }
             return;
         }
 
@@ -132,21 +149,38 @@ export default function ResetPasswordScreen({ navigation, route }) {
             );
 
             if (result.success) {
-                Alert.alert("Success", result.message, [
-                    {
-                        text: "OK",
-                        onPress: () => navigation.navigate("Login"),
-                    },
-                ]);
+                if (Platform.OS === "web") {
+                    showAlert("Success", result.message, () =>
+                        navigation.navigate("Login")
+                    );
+                } else {
+                    Alert.alert("Success", result.message, [
+                        {
+                            text: "OK",
+                            onPress: () => navigation.navigate("Login"),
+                        },
+                    ]);
+                }
             } else {
-                Alert.alert("Reset Failed", result.error);
+                if (Platform.OS === "web") {
+                    showAlert("Reset Failed", result.error);
+                } else {
+                    Alert.alert("Reset Failed", result.error);
+                }
             }
         } catch (error) {
             console.log("Reset password error:", error);
-            Alert.alert(
-                "Error",
-                "An unexpected error occurred. Please try again."
-            );
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Error",
+                    "An unexpected error occurred. Please try again."
+                );
+            } else {
+                Alert.alert(
+                    "Error",
+                    "An unexpected error occurred. Please try again."
+                );
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -154,7 +188,11 @@ export default function ResetPasswordScreen({ navigation, route }) {
 
     const handleResendCode = async () => {
         if (!verificationEmail && !localEmail) {
-            Alert.alert("Error", "Please enter your email address");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Please enter your email address");
+            } else {
+                Alert.alert("Error", "Please enter your email address");
+            }
             return;
         }
 
@@ -174,21 +212,39 @@ export default function ResetPasswordScreen({ navigation, route }) {
             }
 
             if (result.success) {
-                Alert.alert(
-                    "Success",
-                    "Reset code resent. Please check your email."
-                );
+                if (Platform.OS === "web") {
+                    showAlert(
+                        "Success",
+                        "Reset code resent. Please check your email."
+                    );
+                } else {
+                    Alert.alert(
+                        "Success",
+                        "Reset code resent. Please check your email."
+                    );
+                }
             } else {
-                Alert.alert("Failed to Resend", result.error);
+                if (Platform.OS === "web") {
+                    showAlert("Failed to Resend", result.error);
+                } else {
+                    Alert.alert("Failed to Resend", result.error);
+                }
                 setResendDisabled(false);
                 setCountdown(0);
             }
         } catch (error) {
             console.log("Resend code error:", error);
-            Alert.alert(
-                "Error",
-                "An unexpected error occurred. Please try again."
-            );
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Error",
+                    "An unexpected error occurred. Please try again."
+                );
+            } else {
+                Alert.alert(
+                    "Error",
+                    "An unexpected error occurred. Please try again."
+                );
+            }
             setResendDisabled(false);
             setCountdown(0);
         }

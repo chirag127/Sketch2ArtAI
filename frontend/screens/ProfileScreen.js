@@ -6,14 +6,14 @@ import {
     TouchableOpacity,
     Alert,
     ScrollView,
+    Platform,
 } from "react-native";
+import { showAlert } from "../utils/dialog";
 import { Ionicons } from "@expo/vector-icons";
 import AuthContext from "../context/AuthContext";
 
 export default function ProfileScreen({ navigation }) {
     const { userInfo, logout, isLoading } = useContext(AuthContext);
-
-
 
     const handleLogout = async () => {
         console.log("Attempting to logout");
@@ -69,12 +69,19 @@ export default function ProfileScreen({ navigation }) {
 
                 <TouchableOpacity
                     style={styles.actionButton}
-                    onPress={() =>
-                        Alert.alert(
-                            "Coming Soon",
-                            "This feature will be available in a future update."
-                        )
-                    }
+                    onPress={() => {
+                        if (Platform.OS === "web") {
+                            showAlert(
+                                "Coming Soon",
+                                "This feature will be available in a future update."
+                            );
+                        } else {
+                            Alert.alert(
+                                "Coming Soon",
+                                "This feature will be available in a future update."
+                            );
+                        }
+                    }}
                 >
                     <Ionicons
                         name="settings-outline"
@@ -87,12 +94,19 @@ export default function ProfileScreen({ navigation }) {
 
                 <TouchableOpacity
                     style={styles.actionButton}
-                    onPress={() =>
-                        Alert.alert(
-                            "Coming Soon",
-                            "This feature will be available in a future update."
-                        )
-                    }
+                    onPress={() => {
+                        if (Platform.OS === "web") {
+                            showAlert(
+                                "Coming Soon",
+                                "This feature will be available in a future update."
+                            );
+                        } else {
+                            Alert.alert(
+                                "Coming Soon",
+                                "This feature will be available in a future update."
+                            );
+                        }
+                    }}
                 >
                     <Ionicons
                         name="help-circle-outline"

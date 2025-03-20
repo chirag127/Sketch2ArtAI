@@ -11,6 +11,7 @@ import {
     TextInput,
     Share,
 } from "react-native";
+import { showAlert } from "../utils/dialog";
 import AuthContext from "../context/AuthContext";
 import Markdown from "react-native-markdown-display";
 import * as ImagePickerExpo from "expo-image-picker";
@@ -62,7 +63,11 @@ export default function HomeScreen({ navigation, route }) {
             }
         } catch (error) {
             console.error("Error picking image:", error);
-            Alert.alert("Error", "Failed to pick image");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Failed to pick image");
+            } else {
+                Alert.alert("Error", "Failed to pick image");
+            }
         }
     };
 
@@ -72,10 +77,17 @@ export default function HomeScreen({ navigation, route }) {
                 await ImagePickerExpo.requestCameraPermissionsAsync();
 
             if (status !== "granted") {
-                Alert.alert(
-                    "Permission needed",
-                    "Camera permission is required"
-                );
+                if (Platform.OS === "web") {
+                    showAlert(
+                        "Permission needed",
+                        "Camera permission is required"
+                    );
+                } else {
+                    Alert.alert(
+                        "Permission needed",
+                        "Camera permission is required"
+                    );
+                }
                 return;
             }
 
@@ -91,13 +103,27 @@ export default function HomeScreen({ navigation, route }) {
             }
         } catch (error) {
             console.error("Error taking photo:", error);
-            Alert.alert("Error", "Failed to take photo");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Failed to take photo");
+            } else {
+                Alert.alert("Error", "Failed to take photo");
+            }
         }
     };
 
     const convertSketch = async () => {
         if (!sketch) {
-            Alert.alert("No sketch", "Please select or create a sketch first");
+            if (Platform.OS === "web") {
+                showAlert(
+                    "No sketch",
+                    "Please select or create a sketch first"
+                );
+            } else {
+                Alert.alert(
+                    "No sketch",
+                    "Please select or create a sketch first"
+                );
+            }
             return;
         }
 
@@ -310,14 +336,31 @@ export default function HomeScreen({ navigation, route }) {
                     navigator.clipboard
                         .writeText(shareContent)
                         .then(() => {
-                            Alert.alert(
-                                "Copied to clipboard",
-                                "The AI response has been copied to your clipboard"
-                            );
+                            if (Platform.OS === "web") {
+                                showAlert(
+                                    "Copied to clipboard",
+                                    "The AI response has been copied to your clipboard"
+                                );
+                            } else {
+                                Alert.alert(
+                                    "Copied to clipboard",
+                                    "The AI response has been copied to your clipboard"
+                                );
+                            }
                         })
                         .catch((err) => {
                             console.error("Could not copy text: ", err);
-                            Alert.alert("Error", "Could not copy to clipboard");
+                            if (Platform.OS === "web") {
+                                showAlert(
+                                    "Error",
+                                    "Could not copy to clipboard"
+                                );
+                            } else {
+                                Alert.alert(
+                                    "Error",
+                                    "Could not copy to clipboard"
+                                );
+                            }
                         });
                 } else {
                     // For native platforms, use Share API
@@ -328,7 +371,11 @@ export default function HomeScreen({ navigation, route }) {
             }
         } catch (error) {
             console.error("Error sharing:", error);
-            Alert.alert("Error", "Failed to share content");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Failed to share content");
+            } else {
+                Alert.alert("Error", "Failed to share content");
+            }
         }
     };
 
@@ -350,16 +397,31 @@ export default function HomeScreen({ navigation, route }) {
             );
 
             if (response.data && response.data.success) {
-                Alert.alert(
-                    "Success",
-                    "Temporary files cleaned up successfully"
-                );
+                if (Platform.OS === "web") {
+                    showAlert(
+                        "Success",
+                        "Temporary files cleaned up successfully"
+                    );
+                } else {
+                    Alert.alert(
+                        "Success",
+                        "Temporary files cleaned up successfully"
+                    );
+                }
             } else {
-                Alert.alert("Error", "Failed to clean up temporary files");
+                if (Platform.OS === "web") {
+                    showAlert("Error", "Failed to clean up temporary files");
+                } else {
+                    Alert.alert("Error", "Failed to clean up temporary files");
+                }
             }
         } catch (error) {
             console.error("Error cleaning up files:", error);
-            Alert.alert("Error", "Failed to clean up temporary files");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Failed to clean up temporary files");
+            } else {
+                Alert.alert("Error", "Failed to clean up temporary files");
+            }
         } finally {
             setLoading(false);
         }

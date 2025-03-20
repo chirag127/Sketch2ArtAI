@@ -12,6 +12,7 @@ import {
     ScrollView,
     Dimensions,
 } from "react-native";
+import { showAlert } from "../utils/dialog";
 import AuthContext from "../context/AuthContext";
 
 export default function ForgotPasswordScreen({ navigation }) {
@@ -47,7 +48,11 @@ export default function ForgotPasswordScreen({ navigation }) {
 
     const handleForgotPassword = async () => {
         if (!email) {
-            Alert.alert("Error", "Please enter your email");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Please enter your email");
+            } else {
+                Alert.alert("Error", "Please enter your email");
+            }
             return;
         }
 
@@ -74,14 +79,25 @@ export default function ForgotPasswordScreen({ navigation }) {
                 navigation.navigate("ResetPassword", { email: email });
             } else {
                 console.log("Reset code request failed:", result.error);
-                Alert.alert("Request Failed", result.error);
+                if (Platform.OS === "web") {
+                    showAlert("Request Failed", result.error);
+                } else {
+                    Alert.alert("Request Failed", result.error);
+                }
             }
         } catch (error) {
             console.error("Forgot password error:", error);
-            Alert.alert(
-                "Error",
-                "An unexpected error occurred. Please try again."
-            );
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Error",
+                    "An unexpected error occurred. Please try again."
+                );
+            } else {
+                Alert.alert(
+                    "Error",
+                    "An unexpected error occurred. Please try again."
+                );
+            }
         } finally {
             setIsSubmitting(false);
         }

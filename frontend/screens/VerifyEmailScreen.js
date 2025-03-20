@@ -12,6 +12,7 @@ import {
     Dimensions,
     ScrollView,
 } from "react-native";
+import { showAlert } from "../utils/dialog";
 import AuthContext from "../context/AuthContext";
 
 export default function VerifyEmailScreen({ navigation }) {
@@ -60,15 +61,26 @@ export default function VerifyEmailScreen({ navigation }) {
 
     const handleVerify = async () => {
         if (!verificationCode) {
-            Alert.alert("Error", "Please enter the verification code");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Please enter the verification code");
+            } else {
+                Alert.alert("Error", "Please enter the verification code");
+            }
             return;
         }
 
         if (!verificationEmail) {
-            Alert.alert(
-                "Error",
-                "Email information is missing. Please go back to login."
-            );
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Error",
+                    "Email information is missing. Please go back to login."
+                );
+            } else {
+                Alert.alert(
+                    "Error",
+                    "Email information is missing. Please go back to login."
+                );
+            }
             return;
         }
 
@@ -80,16 +92,31 @@ export default function VerifyEmailScreen({ navigation }) {
             );
 
             if (result.success) {
-                Alert.alert("Success", "Email verified successfully");
+                if (Platform.OS === "web") {
+                    showAlert("Success", "Email verified successfully");
+                } else {
+                    Alert.alert("Success", "Email verified successfully");
+                }
             } else {
-                Alert.alert("Verification Failed", result.error);
+                if (Platform.OS === "web") {
+                    showAlert("Verification Failed", result.error);
+                } else {
+                    Alert.alert("Verification Failed", result.error);
+                }
             }
         } catch (error) {
             console.log("Verification error:", error);
-            Alert.alert(
-                "Error",
-                "An unexpected error occurred. Please try again."
-            );
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Error",
+                    "An unexpected error occurred. Please try again."
+                );
+            } else {
+                Alert.alert(
+                    "Error",
+                    "An unexpected error occurred. Please try again."
+                );
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -97,10 +124,17 @@ export default function VerifyEmailScreen({ navigation }) {
 
     const handleResendCode = async () => {
         if (!verificationEmail) {
-            Alert.alert(
-                "Error",
-                "Email information is missing. Please go back to login."
-            );
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Error",
+                    "Email information is missing. Please go back to login."
+                );
+            } else {
+                Alert.alert(
+                    "Error",
+                    "Email information is missing. Please go back to login."
+                );
+            }
             return;
         }
 
@@ -111,21 +145,39 @@ export default function VerifyEmailScreen({ navigation }) {
             const result = await resendVerificationCode(verificationEmail);
 
             if (result.success) {
-                Alert.alert(
-                    "Success",
-                    "Verification code resent. Please check your email."
-                );
+                if (Platform.OS === "web") {
+                    showAlert(
+                        "Success",
+                        "Verification code resent. Please check your email."
+                    );
+                } else {
+                    Alert.alert(
+                        "Success",
+                        "Verification code resent. Please check your email."
+                    );
+                }
             } else {
-                Alert.alert("Failed to Resend", result.error);
+                if (Platform.OS === "web") {
+                    showAlert("Failed to Resend", result.error);
+                } else {
+                    Alert.alert("Failed to Resend", result.error);
+                }
                 setResendDisabled(false);
                 setCountdown(0);
             }
         } catch (error) {
             console.log("Resend code error:", error);
-            Alert.alert(
-                "Error",
-                "An unexpected error occurred. Please try again."
-            );
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Error",
+                    "An unexpected error occurred. Please try again."
+                );
+            } else {
+                Alert.alert(
+                    "Error",
+                    "An unexpected error occurred. Please try again."
+                );
+            }
             setResendDisabled(false);
             setCountdown(0);
         }

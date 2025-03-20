@@ -12,6 +12,7 @@ import {
     ScrollView,
     Dimensions,
 } from "react-native";
+import { showAlert } from "../utils/dialog";
 import AuthContext from "../context/AuthContext";
 
 export default function RegisterScreen({ navigation }) {
@@ -53,22 +54,44 @@ export default function RegisterScreen({ navigation }) {
 
         // Validate inputs
         if (!email || !password || !confirmPassword) {
-            Alert.alert("Error", "Please fill in all fields");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Please fill in all fields");
+            } else {
+                Alert.alert("Error", "Please fill in all fields");
+            }
             return;
         }
 
         if (!validateEmail(email)) {
-            Alert.alert("Error", "Please enter a valid email address");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Please enter a valid email address");
+            } else {
+                Alert.alert("Error", "Please enter a valid email address");
+            }
             return;
         }
 
         if (password.length < 6) {
-            Alert.alert("Error", "Password must be at least 6 characters long");
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Error",
+                    "Password must be at least 6 characters long"
+                );
+            } else {
+                Alert.alert(
+                    "Error",
+                    "Password must be at least 6 characters long"
+                );
+            }
             return;
         }
 
         if (password !== confirmPassword) {
-            Alert.alert("Error", "Passwords do not match");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Passwords do not match");
+            } else {
+                Alert.alert("Error", "Passwords do not match");
+            }
             return;
         }
 
@@ -81,14 +104,25 @@ export default function RegisterScreen({ navigation }) {
                 // No need to navigate manually as App.js will handle it based on isVerifying state
                 console.log("Registration successful, verification required");
             } else {
-                Alert.alert("Registration Failed", result.error);
+                if (Platform.OS === "web") {
+                    showAlert("Registration Failed", result.error);
+                } else {
+                    Alert.alert("Registration Failed", result.error);
+                }
             }
         } catch (error) {
             console.log("Registration error:", error);
-            Alert.alert(
-                "Error",
-                "An unexpected error occurred. Please try again."
-            );
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Error",
+                    "An unexpected error occurred. Please try again."
+                );
+            } else {
+                Alert.alert(
+                    "Error",
+                    "An unexpected error occurred. Please try again."
+                );
+            }
         } finally {
             setIsSubmitting(false);
         }

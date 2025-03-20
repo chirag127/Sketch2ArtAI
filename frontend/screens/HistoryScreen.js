@@ -13,6 +13,7 @@ import {
     Share,
     Platform,
 } from "react-native";
+import { showAlert, showDeleteConfirmDialog } from "../utils/dialog";
 import axios from "axios";
 import { API_URL } from "../env";
 import Markdown from "react-native-markdown-display";
@@ -40,7 +41,17 @@ export default function HistoryScreen({ navigation }) {
             setHistory(response.data);
         } catch (error) {
             console.error("Error fetching history:", error);
-            Alert.alert("Error", "Failed to fetch history. Please try again.");
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Error",
+                    "Failed to fetch history. Please try again."
+                );
+            } else {
+                Alert.alert(
+                    "Error",
+                    "Failed to fetch history. Please try again."
+                );
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -78,26 +89,42 @@ export default function HistoryScreen({ navigation }) {
                 },
             });
             setHistory(history.filter((item) => item._id !== id));
-            Alert.alert("Success", "History item deleted successfully");
+            if (Platform.OS === "web") {
+                showAlert("Success", "History item deleted successfully");
+            } else {
+                Alert.alert("Success", "History item deleted successfully");
+            }
         } catch (error) {
             console.error("Error deleting history item:", error);
-            Alert.alert("Error", "Failed to delete history item");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Failed to delete history item");
+            } else {
+                Alert.alert("Error", "Failed to delete history item");
+            }
         }
     };
 
     const confirmDelete = (id) => {
-        Alert.alert(
-            "Confirm Delete",
-            "Are you sure you want to delete this item?",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    onPress: () => deleteHistoryItem(id),
-                    style: "destructive",
-                },
-            ]
-        );
+        if (Platform.OS === "web") {
+            showDeleteConfirmDialog(
+                "Confirm Delete",
+                "Are you sure you want to delete this item?",
+                () => deleteHistoryItem(id)
+            );
+        } else {
+            Alert.alert(
+                "Confirm Delete",
+                "Are you sure you want to delete this item?",
+                [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                        text: "Delete",
+                        onPress: () => deleteHistoryItem(id),
+                        style: "destructive",
+                    },
+                ]
+            );
+        }
     };
 
     const downloadImage = async (url, filename) => {
@@ -111,11 +138,19 @@ export default function HistoryScreen({ navigation }) {
             const localUri = FileSystem.documentDirectory + filename;
             const { uri } = await FileSystem.downloadAsync(url, localUri);
 
-            Alert.alert("Success", `Image saved to ${uri}`);
+            if (Platform.OS === "web") {
+                showAlert("Success", `Image saved to ${uri}`);
+            } else {
+                Alert.alert("Success", `Image saved to ${uri}`);
+            }
             return uri;
         } catch (error) {
             console.error("Error downloading image:", error);
-            Alert.alert("Error", "Failed to download image");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Failed to download image");
+            } else {
+                Alert.alert("Error", "Failed to download image");
+            }
             return null;
         }
     };
@@ -140,7 +175,11 @@ export default function HistoryScreen({ navigation }) {
             }
         } catch (error) {
             console.error("Error sharing image:", error);
-            Alert.alert("Error", "Failed to share image");
+            if (Platform.OS === "web") {
+                showAlert("Error", "Failed to share image");
+            } else {
+                Alert.alert("Error", "Failed to share image");
+            }
         }
     };
 
