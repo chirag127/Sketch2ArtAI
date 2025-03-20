@@ -673,10 +673,14 @@ app.delete("/api/feed/:id", auth, async (req, res) => {
         });
 
         // Check if user owns the feed item or is admin
-        if (
-            !req.user.isAdmin &&
-            feedItem.user.toString() !== req.user._id.toString()
-        ) {
+        const isAdmin = req.user.isAdmin === true;
+        const isOwner = feedItem.user.toString() === req.user._id.toString();
+
+        console.log(
+            `Authorization check: isAdmin=${isAdmin}, isOwner=${isOwner}`
+        );
+
+        if (!isAdmin && !isOwner) {
             console.log(
                 `Authorization failed: Item owned by ${feedItem.user}, request from ${req.user._id}`
             );
@@ -743,10 +747,14 @@ app.delete("/api/feed/byhistory/:historyId", auth, async (req, res) => {
         });
 
         // Check if user owns the feed item or is admin
-        if (
-            !req.user.isAdmin &&
-            feedItem.user.toString() !== req.user._id.toString()
-        ) {
+        const isAdmin = req.user.isAdmin === true;
+        const isOwner = feedItem.user.toString() === req.user._id.toString();
+
+        console.log(
+            `Authorization check: isAdmin=${isAdmin}, isOwner=${isOwner}`
+        );
+
+        if (!isAdmin && !isOwner) {
             console.log(
                 `Authorization failed: Item owned by ${feedItem.user}, request from ${req.user._id}`
             );
