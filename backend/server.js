@@ -664,6 +664,14 @@ app.delete("/api/feed/:id", auth, async (req, res) => {
             `Found feed item: ${feedItem._id}, owned by user: ${feedItem.user}`
         );
 
+        // Log detailed comparison information
+        console.log({
+            feedItemUserId: feedItem.user.toString(),
+            requestUserId: req.user._id.toString(),
+            isAdmin: req.user.isAdmin,
+            isMatch: feedItem.user.toString() === req.user._id.toString(),
+        });
+
         // Check if user owns the feed item or is admin
         if (
             !req.user.isAdmin &&
@@ -725,6 +733,14 @@ app.delete("/api/feed/byhistory/:historyId", auth, async (req, res) => {
         console.log(
             `Found feed item: ${feedItem._id}, owned by user: ${feedItem.user}`
         );
+
+        // Log detailed comparison information
+        console.log({
+            feedItemUserId: feedItem.user.toString(),
+            requestUserId: req.user._id.toString(),
+            isAdmin: req.user.isAdmin,
+            isMatch: feedItem.user.toString() === req.user._id.toString(),
+        });
 
         // Check if user owns the feed item or is admin
         if (

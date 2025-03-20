@@ -25,6 +25,7 @@ export default function HistoryScreen({ navigation }) {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
+    const [loadingItemId, setLoadingItemId] = useState(null); // Track which item is being processed
 
     const fetchHistory = async () => {
         try {
@@ -158,10 +159,14 @@ export default function HistoryScreen({ navigation }) {
             return;
         }
 
+        // Set loading state for this item
+        setLoadingItemId(id);
+
         // Find the history item to check its current status
         const historyItem = history.find((item) => item._id === id);
         if (!historyItem) {
             Alert.alert("Error", "Item not found in your history");
+            setLoadingItemId(null);
             return;
         }
 
@@ -169,9 +174,6 @@ export default function HistoryScreen({ navigation }) {
         const action = isInFeed ? "remove from" : "share to";
 
         try {
-            // Simple alert to confirm the function is running
-            Alert.alert("Processing", `Attempting to ${action} feed...`);
-
             console.log(`Attempting to ${action} feed for item ${id}`);
 
             let response;
@@ -289,6 +291,9 @@ export default function HistoryScreen({ navigation }) {
                 "Error",
                 `Failed to ${errorAction} feed. Please try again.`
             );
+        } finally {
+            // Clear loading state
+            setLoadingItemId(null);
         }
     };
 
@@ -405,22 +410,21 @@ export default function HistoryScreen({ navigation }) {
                                     : styles.feedButton,
                             ]}
                             activeOpacity={0.5}
+                            disabled={loadingItemId === item._id}
                             onPress={() => {
                                 console.log("Toggle Feed button pressed");
-                                Alert.alert(
-                                    "Button Pressed",
-                                    item.isSharedToFeed
-                                        ? "Removing from feed..."
-                                        : "Sharing to feed..."
-                                );
                                 toggleFeedStatus(item._id);
                             }}
                         >
-                            <Text style={styles.actionButtonText}>
-                                {item.isSharedToFeed
-                                    ? "Remove from Feed"
-                                    : "Share to Feed"}
-                            </Text>
+                            {loadingItemId === item._id ? (
+                                <ActivityIndicator color="white" size="small" />
+                            ) : (
+                                <Text style={styles.actionButtonText}>
+                                    {item.isSharedToFeed
+                                        ? "Remove from Feed"
+                                        : "Share to Feed"}
+                                </Text>
+                            )}
                         </TouchableOpacity>
 
                         <TouchableOpacity

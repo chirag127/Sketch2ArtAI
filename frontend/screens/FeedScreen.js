@@ -28,6 +28,7 @@ export default function FeedScreen({ navigation }) {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
+    const [loadingItemId, setLoadingItemId] = useState(null); // Track which item is being processed
 
     const fetchFeed = async () => {
         try {
@@ -124,12 +125,30 @@ export default function FeedScreen({ navigation }) {
             return;
         }
 
+        // Set loading state for this item
+        setLoadingItemId(id);
+        console.log(`Attempting to remove feed item with ID: ${id}`);
+        console.log(
+            `Current user info:`,
+            userInfo
+                ? {
+                      id: userInfo.id,
+                      isAdmin: userInfo.isAdmin,
+                      email: userInfo.email,
+                  }
+                : "Not logged in"
+        );
+
         try {
+            // First try the direct approach with the feed item ID
+            console.log(`API URL for removal: ${API_URL}/feed/${id}`);
             const response = await axios.delete(`${API_URL}/feed/${id}`, {
                 headers: {
                     Authorization: `Bearer ${userToken}`,
                 },
             });
+
+            console.log("Remove response:", response.data);
 
             if (response.data.success) {
                 Alert.alert("Success", "Item removed from feed successfully");
@@ -137,18 +156,75 @@ export default function FeedScreen({ navigation }) {
             }
         } catch (error) {
             console.error("Error removing from feed:", error);
-            Alert.alert(
-                "Error",
-                error.response?.data?.error || "Failed to remove item from feed"
-            );
+            console.error("Error details:", error.response?.data);
+
+            // Try the alternative approach - find by history item ID
+            try {
+                console.log(
+                    `Trying alternative approach - remove by history item ID`
+                );
+                console.log(`API URL: ${API_URL}/feed/byhistory/${id}`);
+
+                const response = await axios.delete(
+                    `${API_URL}/feed/byhistory/${id}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${userToken}`,
+                        },
+                    }
+                );
+
+                console.log("Alternative remove response:", response.data);
+
+                if (response.data.success) {
+                    Alert.alert(
+                        "Success",
+                        "Item removed from feed successfully"
+                    );
+                    fetchFeed(); // Refresh the feed
+                }
+            } catch (secondError) {
+                console.error(
+                    "Error with alternative removal approach:",
+                    secondError
+                );
+                console.error("Error details:", secondError.response?.data);
+
+                Alert.alert(
+                    "Error",
+                    error.response?.data?.error ||
+                        "Failed to remove item from feed"
+                );
+            }
+        } finally {
+            // Clear loading state
+            setLoadingItemId(null);
         }
     };
 
     const renderFeedItem = ({ item }) => {
         const userEmail = item.user ? item.user.email : "Unknown User";
+
+        // Debug user IDs for comparison
+        const itemUserId =
+            item.user && item.user._id ? item.user._id.toString() : null;
+        const currentUserId =
+            userInfo && userInfo.id ? userInfo.id.toString() : null;
+        const isAdmin = userInfo && userInfo.isAdmin;
+
+        if (itemUserId && currentUserId) {
+            console.log(
+                `Feed item ${item._id} - Item user ID: ${itemUserId}, Current user ID: ${currentUserId}, isAdmin: ${isAdmin}`
+            );
+        }
+
         const canRemove =
             userInfo &&
-            (userInfo.isAdmin || (item.user && item.user._id === userInfo.id));
+            (userInfo.isAdmin ||
+                (item.user &&
+                    item.user._id &&
+                    userInfo.id &&
+                    item.user._id.toString() === userInfo.id.toString()));
 
         return (
             <View
@@ -227,6 +303,7 @@ export default function FeedScreen({ navigation }) {
                                         styles.actionButton,
                                         styles.deleteButton,
                                     ]}
+                                    disabled={loadingItemId === item._id}
                                     onPress={() => {
                                         Alert.alert(
                                             "Remove from Feed",
@@ -238,19 +315,48 @@ export default function FeedScreen({ navigation }) {
                                                 },
                                                 {
                                                     text: "Remove",
-                                                    onPress: () =>
+                                                    onPress: () => {
+                                                        console.log(
+                                                            `Removing feed item ${
+                                                                item._id
+                                                            } by user ${
+                                                                item.user
+                                                                    ? item.user
+                                                                          ._id
+                                                                    : "unknown"
+                                                            }`
+                                                        );
+                                                        console.log(
+                                                            `Current user: ${
+                                                                userInfo
+                                                                    ? userInfo.id
+                                                                    : "not logged in"
+                                                            }, isAdmin: ${
+                                                                userInfo
+                                                                    ? userInfo.isAdmin
+                                                                    : false
+                                                            }`
+                                                        );
                                                         removeFromFeed(
                                                             item._id
-                                                        ),
+                                                        );
+                                                    },
                                                     style: "destructive",
                                                 },
                                             ]
                                         );
                                     }}
                                 >
-                                    <Text style={styles.actionButtonText}>
-                                        Remove from Feed
-                                    </Text>
+                                    {loadingItemId === item._id ? (
+                                        <ActivityIndicator
+                                            color="white"
+                                            size="small"
+                                        />
+                                    ) : (
+                                        <Text style={styles.actionButtonText}>
+                                            Remove from Feed
+                                        </Text>
+                                    )}
                                 </TouchableOpacity>
                             )}
                         </View>
