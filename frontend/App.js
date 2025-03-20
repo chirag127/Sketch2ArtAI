@@ -168,6 +168,8 @@ function AppContainer() {
         });
     }, [userToken, isVerifying, isResettingPassword, isLoading]);
 
+    // Only show loading screen for successful login/logout operations
+    // This prevents screen reloads when there are login errors
     if (isLoading) {
         console.log("AppContainer: Showing loading screen");
         return (

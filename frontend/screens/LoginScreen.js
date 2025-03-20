@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useRef } from "react";
 import {
     StyleSheet,
     Text,
@@ -11,6 +11,7 @@ import {
     Platform,
     ScrollView,
     Dimensions,
+    Animated,
 } from "react-native";
 import AuthContext from "../context/AuthContext";
 
@@ -19,7 +20,10 @@ export default function LoginScreen({ navigation }) {
     const [password, setPassword] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDesktop, setIsDesktop] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const fadeAnim = useRef(new Animated.Value(0)).current; // Initial opacity for error message
 
+    // Use memo to prevent unnecessary re-renders
     const { login, isLoading } = useContext(AuthContext);
 
     // Check if the device is a desktop based on screen width
@@ -41,37 +45,69 @@ export default function LoginScreen({ navigation }) {
         };
     }, []);
 
-    const handleLogin = async () => {
+    // Clear error message when user types in either field
+    useEffect(() => {
+        if (errorMessage) {
+            setErrorMessage("");
+            // Fade out animation
+            Animated.timing(fadeAnim, {
+                toValue: 0,
+                duration: 200,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [email, password]);
+
+    // Fade in animation when error message changes
+    useEffect(() => {
+        if (errorMessage) {
+            // Fade in animation
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [errorMessage]);
+
+    // Use a memoized callback to prevent unnecessary re-renders
+    const handleLogin = async (event) => {
+        // Prevent default form submission behavior
+        event?.preventDefault?.();
+
+        // Clear any previous error messages
+        setErrorMessage("");
+
         if (!email || !password) {
-            Alert.alert("Error", "Please enter both email and password");
+            setErrorMessage("Please enter both email and password");
             return;
         }
 
         setIsSubmitting(true);
         try {
+            // Call the login function from AuthContext
             const result = await login(email, password);
 
             if (result.success) {
                 // On successful login, we don't need to navigate manually
                 // The AuthContext will update userToken which triggers navigation in App.js
                 console.log("Login successful");
-                // Small delay to ensure UI stability before auth state changes
-                await new Promise((resolve) => setTimeout(resolve, 300));
+            } else if (result.needsVerification) {
+                // The AuthContext will handle setting isVerifying state
+                // No need to navigate manually as App.js will handle it based on isVerifying state
+                console.log("Email verification required");
+                // Do NOT navigate here - let the App.js handle it based on state
             } else {
-                if (result.needsVerification) {
-                    // Add a small delay before navigation to prevent UI glitches
-                    await new Promise((resolve) => setTimeout(resolve, 300));
-                    navigation.navigate("VerifyEmail");
-                } else {
-                    Alert.alert("Login Failed", result.error);
-                }
+                // Display error message in the UI
+                console.log("Login failed:", result.error);
+                setErrorMessage(
+                    result.error ||
+                        "Login failed. Please check your credentials."
+                );
             }
         } catch (error) {
             console.log("Login error:", error);
-            Alert.alert(
-                "Error",
-                "An unexpected error occurred. Please try again."
-            );
+            setErrorMessage("An unexpected error occurred. Please try again.");
         } finally {
             setIsSubmitting(false);
         }
@@ -124,9 +160,10 @@ export default function LoginScreen({ navigation }) {
                         />
                         <TouchableOpacity
                             style={styles.forgotPasswordContainer}
-                            onPress={() =>
-                                navigation.navigate("ForgotPassword")
-                            }
+                            onPress={(e) => {
+                                e?.preventDefault?.();
+                                navigation.navigate("ForgotPassword");
+                            }}
                         >
                             <Text style={styles.forgotPasswordText}>
                                 Forgot Password?
@@ -134,13 +171,29 @@ export default function LoginScreen({ navigation }) {
                         </TouchableOpacity>
                     </View>
 
+                    {/* Error message display with animation */}
+                    <Animated.View
+                        style={[
+                            styles.errorContainer,
+                            {
+                                opacity: fadeAnim,
+                                height: errorMessage ? "auto" : 0,
+                                overflow: "hidden",
+                            },
+                        ]}
+                    >
+                        {errorMessage ? (
+                            <Text style={styles.errorText}>{errorMessage}</Text>
+                        ) : null}
+                    </Animated.View>
+
                     <TouchableOpacity
                         style={[
                             styles.button,
                             (isSubmitting || isLoading) &&
                                 styles.disabledButton,
                         ]}
-                        onPress={handleLogin}
+                        onPress={(e) => handleLogin(e)}
                         disabled={isSubmitting || isLoading}
                         activeOpacity={0.7} // Reduce flash effect on press
                     >
@@ -158,7 +211,10 @@ export default function LoginScreen({ navigation }) {
                             Don't have an account?
                         </Text>
                         <TouchableOpacity
-                            onPress={() => navigation.navigate("Register")}
+                            onPress={(e) => {
+                                e?.preventDefault?.();
+                                navigation.navigate("Register");
+                            }}
                         >
                             <Text style={styles.registerLink}>Register</Text>
                         </TouchableOpacity>
@@ -170,6 +226,19 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+    errorContainer: {
+        backgroundColor: "#ffebee",
+        borderRadius: 8,
+        padding: 10,
+        marginBottom: 15,
+        borderWidth: 1,
+        borderColor: "#ef5350",
+    },
+    errorText: {
+        color: "#d32f2f",
+        fontSize: 14,
+        textAlign: "center",
+    },
     container: {
         flex: 1,
         backgroundColor: "#f5f5f5",

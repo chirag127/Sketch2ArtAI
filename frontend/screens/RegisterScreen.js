@@ -47,7 +47,10 @@ export default function RegisterScreen({ navigation }) {
         return re.test(email);
     };
 
-    const handleRegister = async () => {
+    const handleRegister = async (event) => {
+        // Prevent default form submission behavior
+        event?.preventDefault?.();
+
         // Validate inputs
         if (!email || !password || !confirmPassword) {
             Alert.alert("Error", "Please fill in all fields");
@@ -74,7 +77,9 @@ export default function RegisterScreen({ navigation }) {
             const result = await register(email, password);
 
             if (result.success) {
-                navigation.navigate("VerifyEmail");
+                // The AuthContext will handle setting isVerifying state
+                // No need to navigate manually as App.js will handle it based on isVerifying state
+                console.log("Registration successful, verification required");
             } else {
                 Alert.alert("Registration Failed", result.error);
             }
@@ -145,7 +150,7 @@ export default function RegisterScreen({ navigation }) {
                             (isSubmitting || isLoading) &&
                                 styles.disabledButton,
                         ]}
-                        onPress={handleRegister}
+                        onPress={(e) => handleRegister(e)}
                         disabled={isSubmitting || isLoading}
                     >
                         {isSubmitting || isLoading ? (
@@ -160,7 +165,10 @@ export default function RegisterScreen({ navigation }) {
                             Already have an account?
                         </Text>
                         <TouchableOpacity
-                            onPress={() => navigation.navigate("Login")}
+                            onPress={(e) => {
+                                e?.preventDefault?.();
+                                navigation.navigate("Login");
+                            }}
                         >
                             <Text style={styles.loginLink}>Login</Text>
                         </TouchableOpacity>

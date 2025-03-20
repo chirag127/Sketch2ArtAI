@@ -41,30 +41,36 @@ export const AuthProvider = ({ children }) => {
 
     // Register a new user
     const register = async (email, password) => {
-        setIsLoading(true);
+        let registerResult = { success: false, error: null };
+
         try {
+            // Don't set isLoading for failed registration attempts
+            // This prevents screen reloads when there's an error
+
             const response = await axios.post(`${API_URL}/auth/register`, {
                 email,
                 password,
             });
 
-            setIsVerifying(true);
+            // Set verification state
             setVerificationEmail(email);
-            return { success: true, data: response.data };
+            setIsVerifying(true);
+
+            registerResult = { success: true, data: response.data };
         } catch (error) {
             console.log(
                 "Registration error:",
                 error.response?.data || error.message
             );
-            return {
+            registerResult = {
                 success: false,
                 error:
                     error.response?.data?.error ||
                     "Registration failed. Please try again.",
             };
-        } finally {
-            setIsLoading(false);
         }
+
+        return registerResult;
     };
 
     // Verify email with code
@@ -135,11 +141,13 @@ export const AuthProvider = ({ children }) => {
 
     // Login user
     const login = async (email, password) => {
-        setIsLoading(true);
-        try {
-            // Add a small delay to ensure UI stability
-            await new Promise((resolve) => setTimeout(resolve, 100));
+        let loginResult = { success: false, error: null };
 
+        try {
+            // Don't set isLoading for failed login attempts
+            // This prevents screen reloads when there's an error
+
+            // Make the API call to login
             const response = await axios.post(`${API_URL}/auth/login`, {
                 email,
                 password,
@@ -147,10 +155,9 @@ export const AuthProvider = ({ children }) => {
 
             // Check if email needs verification
             if (response.data.needsVerification) {
-                setIsVerifying(true);
+                // Set verification state and return result
                 setVerificationEmail(email);
-                // Small delay before returning to ensure UI stability
-                await new Promise((resolve) => setTimeout(resolve, 100));
+                setIsVerifying(true);
                 return {
                     success: false,
                     needsVerification: true,
@@ -158,14 +165,14 @@ export const AuthProvider = ({ children }) => {
                 };
             }
 
+            // Only set loading state for successful login
+            setIsLoading(true);
+
             const { token, user } = response.data;
 
             // Store auth data
             await AsyncStorage.setItem("userToken", token);
             await AsyncStorage.setItem("userInfo", JSON.stringify(user));
-
-            // Small delay before updating state to ensure UI stability
-            await new Promise((resolve) => setTimeout(resolve, 100));
 
             // Update state
             setUserToken(token);
@@ -174,22 +181,35 @@ export const AuthProvider = ({ children }) => {
             // Set auth header for all future requests
             axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
-            return { success: true };
+            loginResult = { success: true };
         } catch (error) {
             console.log("Login error:", error.response?.data || error.message);
-            // Small delay before returning error to ensure UI stability
-            await new Promise((resolve) => setTimeout(resolve, 100));
-            return {
+
+            // Get the specific error message from the server response
+            let errorMessage = "Login failed. Please check your credentials.";
+
+            if (error.response?.data?.error) {
+                errorMessage = error.response.data.error;
+
+                // Add more helpful context to the error message if needed
+                if (
+                    errorMessage === "No account found with this email address"
+                ) {
+                    errorMessage =
+                        "No account found with this email address. Please check your email or register.";
+                } else if (errorMessage === "Incorrect password") {
+                    errorMessage =
+                        "Incorrect password. Please try again or use 'Forgot Password'.";
+                }
+            }
+
+            loginResult = {
                 success: false,
-                error:
-                    error.response?.data?.error ||
-                    "Login failed. Please check your credentials.",
+                error: errorMessage,
             };
-        } finally {
-            // Small delay before setting loading to false to ensure UI stability
-            await new Promise((resolve) => setTimeout(resolve, 100));
-            setIsLoading(false);
         }
+
+        return loginResult;
     };
 
     // Logout user
