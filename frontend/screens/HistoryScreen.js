@@ -279,8 +279,16 @@ export default function HistoryScreen({ navigation }) {
                 : "Item shared to public feed successfully";
             Alert.alert("Success", successMessage);
 
-            // Refresh the history list
-            fetchHistory();
+            // Update the local state instead of fetching from server again
+            setHistory((prevHistory) => {
+                return prevHistory.map((histItem) => {
+                    if (histItem._id === id) {
+                        // Toggle the isSharedToFeed status
+                        return { ...histItem, isSharedToFeed: !isInFeed };
+                    }
+                    return histItem;
+                });
+            });
         } catch (error) {
             console.error("Error in toggleFeedStatus function:", error);
             console.error("Error details:", error.response?.data);
@@ -291,6 +299,12 @@ export default function HistoryScreen({ navigation }) {
                 "Error",
                 `Failed to ${errorAction} feed. Please try again.`
             );
+
+            // Keep the selected item expanded
+            if (selectedItem && selectedItem._id === id) {
+                // Make sure the selected item stays selected
+                console.log("Keeping item expanded after error");
+            }
         } finally {
             // Clear loading state
             setLoadingItemId(null);
@@ -417,7 +431,22 @@ export default function HistoryScreen({ navigation }) {
                             }}
                         >
                             {loadingItemId === item._id ? (
-                                <ActivityIndicator color="white" size="small" />
+                                <>
+                                    <ActivityIndicator
+                                        color="white"
+                                        size="small"
+                                    />
+                                    <Text
+                                        style={[
+                                            styles.actionButtonText,
+                                            styles.loadingText,
+                                        ]}
+                                    >
+                                        {item.isSharedToFeed
+                                            ? "Removing..."
+                                            : "Sharing..."}
+                                    </Text>
+                                </>
                             ) : (
                                 <Text style={styles.actionButtonText}>
                                     {item.isSharedToFeed
@@ -700,6 +729,12 @@ const styles = StyleSheet.create({
     feedButtonLarge: {
         padding: 15,
         marginVertical: 5,
+        ...(Platform.OS === "web" && {
+            minWidth: 150,
+            flexDirection: "row",
+            justifyContent: "center",
+            alignItems: "center",
+        }),
     },
     feedButtonDisabled: {
         backgroundColor: "#d0a6e0",
@@ -715,5 +750,9 @@ const styles = StyleSheet.create({
         color: "white",
         fontSize: 14,
         fontWeight: "600",
+    },
+    loadingText: {
+        marginTop: 5,
+        fontSize: 12,
     },
 });

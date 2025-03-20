@@ -142,6 +142,10 @@ export default function FeedScreen({ navigation }) {
         try {
             // First try the direct approach with the feed item ID
             console.log(`API URL for removal: ${API_URL}/feed/${id}`);
+            console.log(
+                `Authorization header: Bearer ${userToken.substring(0, 10)}...`
+            );
+
             const response = await axios.delete(`${API_URL}/feed/${id}`, {
                 headers: {
                     Authorization: `Bearer ${userToken}`,
@@ -151,12 +155,27 @@ export default function FeedScreen({ navigation }) {
             console.log("Remove response:", response.data);
 
             if (response.data.success) {
-                Alert.alert("Success", "Item removed from feed successfully");
-                fetchFeed(); // Refresh the feed
+                // Silently update the feed without showing an alert
+                console.log("Item removed successfully, updating UI");
+
+                // Update the UI immediately without a full refresh
+                setFeed((prevFeed) =>
+                    prevFeed.filter((feedItem) => feedItem._id !== id)
+                );
             }
         } catch (error) {
             console.error("Error removing from feed:", error);
             console.error("Error details:", error.response?.data);
+
+            // Only show alert for permission errors
+            if (error.response?.status === 403) {
+                Alert.alert(
+                    "Permission Error",
+                    "You don't have permission to remove this item."
+                );
+                setLoadingItemId(null);
+                return; // Don't try alternative approach for permission errors
+            }
 
             // Try the alternative approach - find by history item ID
             try {
@@ -164,6 +183,12 @@ export default function FeedScreen({ navigation }) {
                     `Trying alternative approach - remove by history item ID`
                 );
                 console.log(`API URL: ${API_URL}/feed/byhistory/${id}`);
+                console.log(
+                    `Authorization header: Bearer ${userToken.substring(
+                        0,
+                        10
+                    )}...`
+                );
 
                 const response = await axios.delete(
                     `${API_URL}/feed/byhistory/${id}`,
@@ -177,11 +202,15 @@ export default function FeedScreen({ navigation }) {
                 console.log("Alternative remove response:", response.data);
 
                 if (response.data.success) {
-                    Alert.alert(
-                        "Success",
-                        "Item removed from feed successfully"
+                    // Silently update the feed without showing an alert
+                    console.log(
+                        "Item removed successfully via alternative approach, updating UI"
                     );
-                    fetchFeed(); // Refresh the feed
+
+                    // Update the UI immediately without a full refresh
+                    setFeed((prevFeed) =>
+                        prevFeed.filter((feedItem) => feedItem._id !== id)
+                    );
                 }
             } catch (secondError) {
                 console.error(
@@ -190,11 +219,24 @@ export default function FeedScreen({ navigation }) {
                 );
                 console.error("Error details:", secondError.response?.data);
 
-                Alert.alert(
-                    "Error",
+                // Show a more detailed error message only for critical errors
+                const errorMessage =
+                    secondError.response?.data?.error ||
                     error.response?.data?.error ||
-                        "Failed to remove item from feed"
-                );
+                    "Failed to remove item from feed";
+
+                console.error(`Final error message: ${errorMessage}`);
+
+                // Only show alert for permission errors or critical failures
+                const isOffline =
+                    Platform.OS === "web" ? !navigator.onLine : false;
+                if (
+                    secondError.response?.status === 403 ||
+                    error.response?.status === 403 ||
+                    isOffline
+                ) {
+                    Alert.alert("Error", errorMessage);
+                }
             }
         } finally {
             // Clear loading state
@@ -218,13 +260,28 @@ export default function FeedScreen({ navigation }) {
             );
         }
 
+        // Check if current user can remove this item
         const canRemove =
             userInfo &&
-            (userInfo.isAdmin ||
+            // Admin can remove any item
+            (userInfo.isAdmin === true ||
+                // Owner can remove their own items
                 (item.user &&
                     item.user._id &&
                     userInfo.id &&
                     item.user._id.toString() === userInfo.id.toString()));
+
+        // Log the permission check result
+        console.log(`Can remove check for item ${item._id}: ${canRemove}`);
+        console.log(`User is admin: ${userInfo?.isAdmin === true}`);
+        console.log(
+            `User owns item: ${
+                item.user &&
+                item.user._id &&
+                userInfo?.id &&
+                item.user._id.toString() === userInfo.id.toString()
+            }`
+        );
 
         return (
             <View
@@ -302,49 +359,32 @@ export default function FeedScreen({ navigation }) {
                                     style={[
                                         styles.actionButton,
                                         styles.deleteButton,
+                                        isDesktop && styles.desktopActionButton,
                                     ]}
                                     disabled={loadingItemId === item._id}
                                     onPress={() => {
-                                        Alert.alert(
-                                            "Remove from Feed",
-                                            "Are you sure you want to remove this item from the public feed?",
-                                            [
-                                                {
-                                                    text: "Cancel",
-                                                    style: "cancel",
-                                                },
-                                                {
-                                                    text: "Remove",
-                                                    onPress: () => {
-                                                        console.log(
-                                                            `Removing feed item ${
-                                                                item._id
-                                                            } by user ${
-                                                                item.user
-                                                                    ? item.user
-                                                                          ._id
-                                                                    : "unknown"
-                                                            }`
-                                                        );
-                                                        console.log(
-                                                            `Current user: ${
-                                                                userInfo
-                                                                    ? userInfo.id
-                                                                    : "not logged in"
-                                                            }, isAdmin: ${
-                                                                userInfo
-                                                                    ? userInfo.isAdmin
-                                                                    : false
-                                                            }`
-                                                        );
-                                                        removeFromFeed(
-                                                            item._id
-                                                        );
-                                                    },
-                                                    style: "destructive",
-                                                },
-                                            ]
+                                        // Direct call without confirmation alert
+                                        console.log(
+                                            `Removing feed item ${
+                                                item._id
+                                            } by user ${
+                                                item.user
+                                                    ? item.user._id
+                                                    : "unknown"
+                                            }`
                                         );
+                                        console.log(
+                                            `Current user: ${
+                                                userInfo
+                                                    ? userInfo.id
+                                                    : "not logged in"
+                                            }, isAdmin: ${
+                                                userInfo
+                                                    ? userInfo.isAdmin
+                                                    : false
+                                            }`
+                                        );
+                                        removeFromFeed(item._id);
                                     }}
                                 >
                                     {loadingItemId === item._id ? (
@@ -353,9 +393,22 @@ export default function FeedScreen({ navigation }) {
                                             size="small"
                                         />
                                     ) : (
-                                        <Text style={styles.actionButtonText}>
-                                            Remove from Feed
-                                        </Text>
+                                        <>
+                                            <Text
+                                                style={styles.actionButtonText}
+                                            >
+                                                Remove from Feed
+                                            </Text>
+                                            {isDesktop && (
+                                                <Text
+                                                    style={
+                                                        styles.actionButtonSubtext
+                                                    }
+                                                >
+                                                    (Admin or Owner Only)
+                                                </Text>
+                                            )}
+                                        </>
                                     )}
                                 </TouchableOpacity>
                             )}
@@ -573,8 +626,19 @@ const styles = StyleSheet.create({
     deleteButton: {
         backgroundColor: "#e74c3c",
     },
+    desktopActionButton: {
+        minWidth: 150,
+        paddingHorizontal: 25,
+        paddingVertical: 12,
+        marginHorizontal: 10,
+    },
     actionButtonText: {
         color: "white",
         fontWeight: "bold",
+    },
+    actionButtonSubtext: {
+        color: "rgba(255, 255, 255, 0.8)",
+        fontSize: 12,
+        marginTop: 4,
     },
 });
