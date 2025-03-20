@@ -204,13 +204,15 @@ router.post("/login", async (req, res) => {
         // Find user
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(401).json({ error: "Invalid credentials" });
+            return res
+                .status(401)
+                .json({ error: "No account found with this email address" });
         }
 
         // Check password
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
-            return res.status(401).json({ error: "Invalid credentials" });
+            return res.status(401).json({ error: "Incorrect password" });
         }
 
         // Check if email is verified
