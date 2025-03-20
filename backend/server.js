@@ -51,6 +51,11 @@ app.use(express.json());
 // Handle preflight requests
 app.options("*", cors());
 
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+    res.status(200).json({ status: "ok", message: "Server is running" });
+});
+
 // Use auth routes
 app.use("/api/auth", authRoutes);
 
