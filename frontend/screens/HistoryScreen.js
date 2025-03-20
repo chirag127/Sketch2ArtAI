@@ -177,16 +177,83 @@ export default function HistoryScreen({ navigation }) {
             let response;
 
             if (isInFeed) {
-                // If already in feed, remove it
-                console.log(`API URL for removal: ${API_URL}/feed/${id}`);
-                response = await axios({
-                    method: "delete",
-                    url: `${API_URL}/feed/${id}`,
+                // First, we need to get the feed item ID
+                console.log(
+                    "Fetching feed items to find the corresponding feed item ID"
+                );
+                const feedResponse = await axios.get(`${API_URL}/feed`, {
                     headers: {
                         Authorization: `Bearer ${userToken}`,
-                        "Content-Type": "application/json",
                     },
                 });
+
+                console.log(
+                    "Feed items fetched, searching for matching history item"
+                );
+                console.log("Feed data:", feedResponse.data);
+
+                // Find the feed item that references this history item
+                console.log(
+                    "Looking for feed item with historyItem matching:",
+                    id
+                );
+                let feedItem = null;
+
+                // Loop through feed items to find a match
+                for (const item of feedResponse.data) {
+                    console.log(
+                        `Checking feed item: ${item._id}, historyItem: ${item.historyItem}`
+                    );
+                    if (
+                        item.historyItem === id ||
+                        item.historyItem._id === id
+                    ) {
+                        feedItem = item;
+                        console.log("Found matching feed item!");
+                        break;
+                    }
+                }
+
+                if (!feedItem) {
+                    console.error(
+                        "Could not find feed item for history item:",
+                        id
+                    );
+
+                    // Try a different approach - look through all feed items
+                    console.log(
+                        "Trying alternative approach to find feed item"
+                    );
+
+                    // Make a direct API call to remove the item using the history ID
+                    console.log(
+                        `Attempting direct removal with history ID: ${API_URL}/feed/byhistory/${id}`
+                    );
+                    response = await axios({
+                        method: "delete",
+                        url: `${API_URL}/feed/byhistory/${id}`,
+                        headers: {
+                            Authorization: `Bearer ${userToken}`,
+                            "Content-Type": "application/json",
+                        },
+                    });
+                } else {
+                    const feedItemId = feedItem._id;
+                    console.log(`Found feed item ID: ${feedItemId}`);
+                    console.log(
+                        `API URL for removal: ${API_URL}/feed/${feedItemId}`
+                    );
+
+                    // Now remove the feed item using its ID
+                    response = await axios({
+                        method: "delete",
+                        url: `${API_URL}/feed/${feedItemId}`,
+                        headers: {
+                            Authorization: `Bearer ${userToken}`,
+                            "Content-Type": "application/json",
+                        },
+                    });
+                }
             } else {
                 // If not in feed, add it
                 console.log(`API URL for sharing: ${API_URL}/feed/share/${id}`);
@@ -214,6 +281,7 @@ export default function HistoryScreen({ navigation }) {
             fetchHistory();
         } catch (error) {
             console.error("Error in toggleFeedStatus function:", error);
+            console.error("Error details:", error.response?.data);
 
             // Show a simple error message
             const errorAction = isInFeed ? "remove from" : "share to";

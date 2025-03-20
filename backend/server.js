@@ -645,24 +645,33 @@ app.post("/api/feed/share/:historyId", auth, async (req, res) => {
     }
 });
 
-// API endpoint to remove an item from the public feed
+// API endpoint to remove an item from the public feed by feed item ID
 app.delete("/api/feed/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
+        console.log(`Removing feed item with ID: ${id}`);
 
         // Find the feed item
         const feedItem = await PublicFeed.findById(id);
 
         // Check if feed item exists
         if (!feedItem) {
+            console.log(`Feed item not found with ID: ${id}`);
             return res.status(404).json({ error: "Feed item not found" });
         }
+
+        console.log(
+            `Found feed item: ${feedItem._id}, owned by user: ${feedItem.user}`
+        );
 
         // Check if user owns the feed item or is admin
         if (
             !req.user.isAdmin &&
             feedItem.user.toString() !== req.user._id.toString()
         ) {
+            console.log(
+                `Authorization failed: Item owned by ${feedItem.user}, request from ${req.user._id}`
+            );
             return res
                 .status(403)
                 .json({ error: "Not authorized to remove this feed item" });
@@ -671,19 +680,88 @@ app.delete("/api/feed/:id", auth, async (req, res) => {
         // Find the associated history item and update it
         const historyItem = await ImageHistory.findById(feedItem.historyItem);
         if (historyItem) {
+            console.log(
+                `Updating history item ${historyItem._id} to mark as not shared`
+            );
             historyItem.isSharedToFeed = false;
             await historyItem.save();
         }
 
         // Delete the feed item
+        console.log(`Deleting feed item ${id}`);
         await PublicFeed.findByIdAndDelete(id);
 
+        console.log(`Successfully removed feed item ${id}`);
         res.json({
             success: true,
             message: "Item removed from public feed successfully",
         });
     } catch (error) {
         console.error("Error removing from public feed:", error);
+        res.status(500).json({
+            error: "Failed to remove from public feed",
+            details: error.message,
+        });
+    }
+});
+
+// API endpoint to remove an item from the public feed by history item ID
+app.delete("/api/feed/byhistory/:historyId", auth, async (req, res) => {
+    try {
+        const { historyId } = req.params;
+        console.log(`Removing feed item by history ID: ${historyId}`);
+
+        // Find the feed item that references this history item
+        const feedItem = await PublicFeed.findOne({ historyItem: historyId });
+
+        // Check if feed item exists
+        if (!feedItem) {
+            console.log(`No feed item found for history ID: ${historyId}`);
+            return res
+                .status(404)
+                .json({ error: "Feed item not found for this history item" });
+        }
+
+        console.log(
+            `Found feed item: ${feedItem._id}, owned by user: ${feedItem.user}`
+        );
+
+        // Check if user owns the feed item or is admin
+        if (
+            !req.user.isAdmin &&
+            feedItem.user.toString() !== req.user._id.toString()
+        ) {
+            console.log(
+                `Authorization failed: Item owned by ${feedItem.user}, request from ${req.user._id}`
+            );
+            return res
+                .status(403)
+                .json({ error: "Not authorized to remove this feed item" });
+        }
+
+        // Find the associated history item and update it
+        const historyItem = await ImageHistory.findById(historyId);
+        if (historyItem) {
+            console.log(
+                `Updating history item ${historyId} to mark as not shared`
+            );
+            historyItem.isSharedToFeed = false;
+            await historyItem.save();
+        }
+
+        // Delete the feed item
+        console.log(`Deleting feed item ${feedItem._id}`);
+        await PublicFeed.findByIdAndDelete(feedItem._id);
+
+        console.log(
+            `Successfully removed feed item for history ID ${historyId}`
+        );
+        res.json({
+            success: true,
+            message: "Item removed from public feed successfully",
+        });
+    } catch (error) {
+        console.error("Error removing from public feed by history ID:", error);
         res.status(500).json({
             error: "Failed to remove from public feed",
             details: error.message,
