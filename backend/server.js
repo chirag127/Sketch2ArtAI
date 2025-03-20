@@ -572,20 +572,32 @@ app.get("/api/feed", async (req, res) => {
 app.post("/api/feed/share/:historyId", auth, async (req, res) => {
     try {
         const { historyId } = req.params;
+        console.log(
+            `Share to feed request received for historyId: ${historyId}`
+        );
+        console.log(`User ID from auth: ${req.user._id}`);
 
         // Find the history item
         const historyItem = await ImageHistory.findById(historyId);
 
         // Check if history item exists
         if (!historyItem) {
+            console.log(`History item not found with ID: ${historyId}`);
             return res.status(404).json({ error: "History item not found" });
         }
+
+        console.log(
+            `Found history item: ${historyItem._id}, owned by user: ${historyItem.user}`
+        );
 
         // Check if user owns the history item
         if (
             historyItem.user &&
             historyItem.user.toString() !== req.user._id.toString()
         ) {
+            console.log(
+                `Authorization failed: Item owned by ${historyItem.user}, request from ${req.user._id}`
+            );
             return res
                 .status(403)
                 .json({ error: "Not authorized to share this history item" });
@@ -593,6 +605,7 @@ app.post("/api/feed/share/:historyId", auth, async (req, res) => {
 
         // Check if already shared
         if (historyItem.isSharedToFeed) {
+            console.log(`Item ${historyId} is already shared to feed`);
             return res
                 .status(400)
                 .json({ error: "Item already shared to feed" });
@@ -608,17 +621,21 @@ app.post("/api/feed/share/:historyId", auth, async (req, res) => {
             historyItem: historyItem._id,
         });
 
+        console.log(`Created new feed item, saving to database...`);
         await feedItem.save();
+        console.log(`Feed item saved with ID: ${feedItem._id}`);
 
         // Update the history item to mark as shared
         historyItem.isSharedToFeed = true;
         await historyItem.save();
+        console.log(`Updated history item ${historyId} to mark as shared`);
 
         res.json({
             success: true,
             message: "Item shared to public feed successfully",
             feedItem,
         });
+        console.log(`Successfully shared item ${historyId} to feed`);
     } catch (error) {
         console.error("Error sharing to public feed:", error);
         res.status(500).json({

@@ -48,6 +48,7 @@ export default function FeedScreen({ navigation }) {
 
     // Fetch feed when component mounts
     useEffect(() => {
+        console.log("FeedScreen mounted - fetching feed data");
         fetchFeed();
     }, []);
 

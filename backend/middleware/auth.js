@@ -9,25 +9,61 @@ const auth = async (req, res, next) => {
             return res.status(401).json({ error: "Authentication required" });
         }
 
-        const decoded = jwt.verify(
-            token,
-            process.env.JWT_SECRET || "your-secret-key"
+        console.log(
+            "Auth middleware - Received token:",
+            token.substring(0, 10) + "..."
         );
-        const user = await User.findById(decoded.userId);
 
-        if (!user) {
-            return res.status(401).json({ error: "User not found" });
+        try {
+            const decoded = jwt.verify(
+                token,
+                process.env.JWT_SECRET || "your-secret-key"
+            );
+            console.log(
+                "Auth middleware - Token decoded successfully, userId:",
+                decoded.userId
+            );
+
+            const user = await User.findById(decoded.userId);
+
+            if (!user) {
+                console.log(
+                    "Auth middleware - User not found for userId:",
+                    decoded.userId
+                );
+                return res.status(401).json({ error: "User not found" });
+            }
+
+            if (!user.isVerified) {
+                console.log(
+                    "Auth middleware - User email not verified:",
+                    user.email
+                );
+                return res.status(401).json({ error: "Email not verified" });
+            }
+
+            req.user = user;
+            req.token = token;
+            console.log(
+                "Auth middleware - Authentication successful for user:",
+                user.email
+            );
+            next();
+        } catch (jwtError) {
+            console.error(
+                "Auth middleware - JWT verification error:",
+                jwtError.message
+            );
+            return res
+                .status(401)
+                .json({ error: "Invalid token", details: jwtError.message });
         }
-
-        if (!user.isVerified) {
-            return res.status(401).json({ error: "Email not verified" });
-        }
-
-        req.user = user;
-        req.token = token;
-        next();
     } catch (error) {
-        res.status(401).json({ error: "Authentication failed" });
+        console.error("Auth middleware - General error:", error.message);
+        res.status(401).json({
+            error: "Authentication failed",
+            details: error.message,
+        });
     }
 };
 

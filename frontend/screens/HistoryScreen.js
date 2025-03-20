@@ -150,40 +150,67 @@ export default function HistoryScreen({ navigation }) {
     };
 
     const shareToFeed = async (id) => {
+        console.log("shareToFeed function called with id:", id);
+
+        if (!userToken) {
+            console.log("No user token available");
+            Alert.alert(
+                "Error",
+                "You must be logged in to share items to the feed"
+            );
+            return;
+        }
+
         try {
+            // Simple alert to confirm the function is running
+            Alert.alert("Processing", "Attempting to share to feed...");
+
             console.log(`Attempting to share item ${id} to feed`);
             console.log(`API URL: ${API_URL}/feed/share/${id}`);
-            console.log(`User token available: ${!!userToken}`);
 
-            const response = await axios.post(
-                `${API_URL}/feed/share/${id}`,
-                {},
-                {
-                    headers: {
-                        Authorization: `Bearer ${userToken}`,
-                    },
-                }
-            );
+            // Make the API call with minimal complexity
+            const response = await axios({
+                method: "post",
+                url: `${API_URL}/feed/share/${id}`,
+                headers: {
+                    Authorization: `Bearer ${userToken}`,
+                    "Content-Type": "application/json",
+                },
+            });
 
-            console.log("Share to feed response:", response.data);
+            console.log("API call completed");
+            console.log("Response status:", response.status);
+            console.log("Response data:", response.data);
 
-            if (response.data.success) {
-                Alert.alert(
-                    "Success",
-                    "Item shared to public feed successfully"
-                );
-                fetchHistory(); // Refresh to update the UI
-            }
+            // Show success message
+            Alert.alert("Success", "Item shared to public feed successfully");
+
+            // Refresh the history list
+            fetchHistory();
         } catch (error) {
-            console.error("Error sharing to feed:", error);
-            console.error("Error details:", error.response?.data);
-            const errorMessage =
-                error.response?.data?.error || "Failed to share to public feed";
-            Alert.alert("Error", errorMessage);
+            console.error("Error in shareToFeed function:", error);
+
+            // Show a simple error message
+            Alert.alert("Error", "Failed to share to feed. Please try again.");
         }
     };
 
+    const shareToFeedHandler = (item) => {
+        console.log("shareToFeedHandler called for item:", item._id);
+
+        if (item.isSharedToFeed) {
+            console.log("Item is already shared to feed");
+            Alert.alert("Info", "This item is already shared to the feed");
+            return;
+        }
+
+        // Directly call shareToFeed without confirmation for testing
+        console.log("Calling shareToFeed directly");
+        shareToFeed(item._id);
+    };
+
     const confirmShareToFeed = (id) => {
+        console.log("confirmShareToFeed called for id:", id);
         Alert.alert(
             "Share to Public Feed",
             "Are you sure you want to share this item to the public feed? It will be visible to all users of the app.",
@@ -302,14 +329,20 @@ export default function HistoryScreen({ navigation }) {
                         <TouchableOpacity
                             style={[
                                 styles.actionButton,
+                                styles.feedButtonLarge,
                                 item.isSharedToFeed
                                     ? styles.feedButtonDisabled
                                     : styles.feedButton,
                             ]}
-                            onPress={() =>
-                                !item.isSharedToFeed &&
-                                confirmShareToFeed(item._id)
-                            }
+                            activeOpacity={0.5}
+                            onPress={() => {
+                                console.log("Share to Feed button pressed");
+                                Alert.alert(
+                                    "Button Pressed",
+                                    "Share to Feed button was pressed"
+                                );
+                                shareToFeed(item._id);
+                            }}
                         >
                             <Text style={styles.actionButtonText}>
                                 {item.isSharedToFeed
@@ -343,6 +376,17 @@ export default function HistoryScreen({ navigation }) {
         <View style={styles.container}>
             <View style={styles.headerContainer}>
                 <Text style={styles.title}>Conversion History</Text>
+
+                <TouchableOpacity
+                    style={styles.testButton}
+                    onPress={() => {
+                        console.log("Test button pressed");
+                        Alert.alert("Test", "Button click is working!");
+                    }}
+                >
+                    <Text style={styles.testButtonText}>Test</Text>
+                </TouchableOpacity>
+
                 {userInfo && userInfo.isAdmin && (
                     <TouchableOpacity
                         style={styles.adminButton}
@@ -407,6 +451,19 @@ const styles = StyleSheet.create({
         borderRadius: 20,
     },
     adminButtonText: {
+        color: "white",
+        fontSize: 14,
+        fontWeight: "bold",
+    },
+    testButton: {
+        position: "absolute",
+        left: 0,
+        backgroundColor: "#4CAF50",
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+    },
+    testButtonText: {
         color: "white",
         fontSize: 14,
         fontWeight: "bold",
@@ -563,6 +620,10 @@ const styles = StyleSheet.create({
     },
     feedButton: {
         backgroundColor: "#9c27b0",
+    },
+    feedButtonLarge: {
+        padding: 15,
+        marginVertical: 5,
     },
     feedButtonDisabled: {
         backgroundColor: "#d0a6e0",
