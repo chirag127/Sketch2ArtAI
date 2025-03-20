@@ -30,6 +30,7 @@ export default function ResetPasswordScreen({ navigation, route }) {
         isLoading,
         verificationEmail,
         setIsVerifying,
+        setIsResettingPassword,
         setVerificationEmail,
     } = useContext(AuthContext);
 
@@ -49,7 +50,7 @@ export default function ResetPasswordScreen({ navigation, route }) {
             );
             setLocalEmail(route.params.email);
             setVerificationEmail(route.params.email);
-            setIsVerifying(true);
+            setIsResettingPassword(true);
         }
     }, [
         route?.params,
@@ -114,7 +115,7 @@ export default function ResetPasswordScreen({ navigation, route }) {
                 localEmail
             );
             setVerificationEmail(localEmail);
-            setIsVerifying(true);
+            setIsResettingPassword(true);
             // Add a small delay to ensure context is updated
             await new Promise((resolve) => setTimeout(resolve, 300));
         }
@@ -169,13 +170,13 @@ export default function ResetPasswordScreen({ navigation, route }) {
             // If using localEmail, update the verificationEmail in context
             if (!verificationEmail && localEmail) {
                 setVerificationEmail(localEmail);
-                setIsVerifying(true);
+                setIsResettingPassword(true);
             }
 
             if (result.success) {
                 Alert.alert(
                     "Success",
-                    "Verification code resent. Please check your email."
+                    "Reset code resent. Please check your email."
                 );
             } else {
                 Alert.alert("Failed to Resend", result.error);
@@ -194,7 +195,7 @@ export default function ResetPasswordScreen({ navigation, route }) {
     };
 
     const handleCancel = () => {
-        setIsVerifying(false);
+        setIsResettingPassword(false);
         setVerificationEmail("");
         navigation.navigate("Login");
     };
@@ -298,7 +299,7 @@ export default function ResetPasswordScreen({ navigation, route }) {
                             >
                                 {resendDisabled
                                     ? `Resend code in ${countdown}s`
-                                    : "Resend verification code"}
+                                    : "Resend reset code"}
                             </Text>
                         </TouchableOpacity>
                     </View>

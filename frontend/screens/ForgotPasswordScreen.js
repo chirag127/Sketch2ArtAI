@@ -19,8 +19,12 @@ export default function ForgotPasswordScreen({ navigation }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDesktop, setIsDesktop] = useState(false);
 
-    const { forgotPassword, isLoading, setVerificationEmail, setIsVerifying } =
-        useContext(AuthContext);
+    const {
+        forgotPassword,
+        isLoading,
+        setVerificationEmail,
+        setIsResettingPassword,
+    } = useContext(AuthContext);
 
     // Check if the device is a desktop based on screen width
     useEffect(() => {
@@ -61,7 +65,7 @@ export default function ForgotPasswordScreen({ navigation }) {
 
                 // Ensure verificationEmail is set in context
                 setVerificationEmail(email);
-                setIsVerifying(true);
+                setIsResettingPassword(true);
 
                 // Add a small delay before navigation to ensure context is updated
                 await new Promise((resolve) => setTimeout(resolve, 500));
@@ -153,7 +157,7 @@ export default function ForgotPasswordScreen({ navigation }) {
                                     email
                                 );
                                 setVerificationEmail(email);
-                                setIsVerifying(true);
+                                setIsResettingPassword(true);
 
                                 // Add a small delay to ensure context is updated
                                 setTimeout(() => {

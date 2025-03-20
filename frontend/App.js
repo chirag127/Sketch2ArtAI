@@ -134,16 +134,18 @@ function AuthStack() {
 
 // App container with authentication flow
 function AppContainer() {
-    const { isLoading, userToken, isVerifying } = useContext(AuthContext);
+    const { isLoading, userToken, isVerifying, isResettingPassword } =
+        useContext(AuthContext);
 
     // Add debugging for auth state changes
     useEffect(() => {
         console.log("AppContainer: Auth state changed", {
             userToken,
             isVerifying,
+            isResettingPassword,
             isLoading,
         });
-    }, [userToken, isVerifying, isLoading]);
+    }, [userToken, isVerifying, isResettingPassword, isLoading]);
 
     if (isLoading) {
         console.log("AppContainer: Showing loading screen");
@@ -166,6 +168,16 @@ function AppContainer() {
                 <Stack.Screen
                     name="VerifyEmail"
                     component={VerifyEmailScreen}
+                />
+            </Stack.Navigator>
+        );
+    } else if (isResettingPassword) {
+        console.log("AppContainer: Showing ResetPassword screen");
+        screenToShow = (
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+                <Stack.Screen
+                    name="ResetPassword"
+                    component={ResetPasswordScreen}
                 />
             </Stack.Navigator>
         );

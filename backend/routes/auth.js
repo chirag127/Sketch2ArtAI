@@ -281,6 +281,9 @@ router.post("/forgot-password", async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
 
+        // For password reset, we don't need to check if email is verified
+        // Users should be able to reset their password regardless of verification status
+
         // Generate reset password code (different from verification code)
         const resetPasswordCode = generateResetPasswordCode();
         const resetPasswordCodeExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
@@ -331,6 +334,9 @@ router.post("/reset-password", async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
+
+        // For password reset, we don't check if email is verified
+        // Users should be able to reset their password regardless of verification status
 
         // Check reset password code
         if (user.resetPasswordCode !== code) {

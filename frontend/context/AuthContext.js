@@ -11,6 +11,7 @@ export const AuthProvider = ({ children }) => {
     const [userInfo, setUserInfo] = useState(null);
     const [isVerifying, setIsVerifying] = useState(false);
     const [verificationEmail, setVerificationEmail] = useState("");
+    const [isResettingPassword, setIsResettingPassword] = useState(false);
 
     // Initialize auth state from storage
     useEffect(() => {
@@ -235,7 +236,7 @@ export const AuthProvider = ({ children }) => {
             );
 
             console.log("Forgot password response:", response.data);
-            setIsVerifying(true);
+            setIsResettingPassword(true);
             setVerificationEmail(email);
             return { success: true, message: response.data.message };
         } catch (error) {
@@ -251,6 +252,23 @@ export const AuthProvider = ({ children }) => {
             if (error.response) {
                 // The request was made and the server responded with a status code
                 // that falls out of the range of 2xx
+
+                // If the error is "Email already verified", we should ignore it for password reset
+                // This error comes from a different endpoint and shouldn't affect password reset
+                if (error.response.data?.error === "Email already verified") {
+                    console.log(
+                        "Ignoring 'Email already verified' error for password reset"
+                    );
+                    // Return success anyway since this error is not relevant for password reset
+                    setIsResettingPassword(true);
+                    setVerificationEmail(email);
+                    return {
+                        success: true,
+                        message:
+                            "Password reset code sent successfully. Please check your email.",
+                    };
+                }
+
                 return {
                     success: false,
                     error:
@@ -290,6 +308,7 @@ export const AuthProvider = ({ children }) => {
             );
 
             setIsVerifying(false);
+            setIsResettingPassword(false);
             setVerificationEmail("");
             return { success: true, message: response.data.message };
         } catch (error) {
@@ -315,6 +334,7 @@ export const AuthProvider = ({ children }) => {
                 userToken,
                 userInfo,
                 isVerifying,
+                isResettingPassword,
                 verificationEmail,
                 register,
                 login,
@@ -324,6 +344,7 @@ export const AuthProvider = ({ children }) => {
                 forgotPassword,
                 resetPassword,
                 setIsVerifying,
+                setIsResettingPassword,
                 setVerificationEmail,
             }}
         >

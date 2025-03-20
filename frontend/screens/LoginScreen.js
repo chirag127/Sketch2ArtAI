@@ -122,7 +122,7 @@ export default function LoginScreen({ navigation }) {
                             onChangeText={setPassword}
                             secureTextEntry
                         />
-                        {/* <TouchableOpacity
+                        <TouchableOpacity
                             style={styles.forgotPasswordContainer}
                             onPress={() =>
                                 navigation.navigate("ForgotPassword")
@@ -131,7 +131,7 @@ export default function LoginScreen({ navigation }) {
                             <Text style={styles.forgotPasswordText}>
                                 Forgot Password?
                             </Text>
-                        </TouchableOpacity> */}
+                        </TouchableOpacity>
                     </View>
 
                     <TouchableOpacity
