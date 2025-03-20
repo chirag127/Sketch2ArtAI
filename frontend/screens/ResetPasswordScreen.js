@@ -237,11 +237,11 @@ export default function ResetPasswordScreen({ navigation, route }) {
                         <Text style={styles.label}>Reset Code</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Enter 8-character code"
+                            placeholder="Enter 6-digit code"
                             value={verificationCode}
                             onChangeText={setVerificationCode}
-                            autoCapitalize="characters"
-                            maxLength={8}
+                            keyboardType="numeric"
+                            maxLength={6}
                         />
                     </View>
 

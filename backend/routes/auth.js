@@ -10,6 +10,12 @@ const generateVerificationCode = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
+// Generate random reset password code
+const generateResetPasswordCode = () => {
+    // Generate a 6-digit numerical code
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
 // Register a new user
 router.post("/register", async (req, res) => {
     try {
