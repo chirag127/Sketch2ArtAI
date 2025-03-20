@@ -149,80 +149,82 @@ export default function HistoryScreen({ navigation }) {
         );
     };
 
-    const shareToFeed = async (id) => {
-        console.log("shareToFeed function called with id:", id);
+    const toggleFeedStatus = async (id) => {
+        console.log("toggleFeedStatus function called with id:", id);
 
         if (!userToken) {
             console.log("No user token available");
-            Alert.alert(
-                "Error",
-                "You must be logged in to share items to the feed"
-            );
+            Alert.alert("Error", "You must be logged in to manage feed items");
             return;
         }
 
+        // Find the history item to check its current status
+        const historyItem = history.find((item) => item._id === id);
+        if (!historyItem) {
+            Alert.alert("Error", "Item not found in your history");
+            return;
+        }
+
+        const isInFeed = historyItem.isSharedToFeed;
+        const action = isInFeed ? "remove from" : "share to";
+
         try {
             // Simple alert to confirm the function is running
-            Alert.alert("Processing", "Attempting to share to feed...");
+            Alert.alert("Processing", `Attempting to ${action} feed...`);
 
-            console.log(`Attempting to share item ${id} to feed`);
-            console.log(`API URL: ${API_URL}/feed/share/${id}`);
+            console.log(`Attempting to ${action} feed for item ${id}`);
 
-            // Make the API call with minimal complexity
-            const response = await axios({
-                method: "post",
-                url: `${API_URL}/feed/share/${id}`,
-                headers: {
-                    Authorization: `Bearer ${userToken}`,
-                    "Content-Type": "application/json",
-                },
-            });
+            let response;
+
+            if (isInFeed) {
+                // If already in feed, remove it
+                console.log(`API URL for removal: ${API_URL}/feed/${id}`);
+                response = await axios({
+                    method: "delete",
+                    url: `${API_URL}/feed/${id}`,
+                    headers: {
+                        Authorization: `Bearer ${userToken}`,
+                        "Content-Type": "application/json",
+                    },
+                });
+            } else {
+                // If not in feed, add it
+                console.log(`API URL for sharing: ${API_URL}/feed/share/${id}`);
+                response = await axios({
+                    method: "post",
+                    url: `${API_URL}/feed/share/${id}`,
+                    headers: {
+                        Authorization: `Bearer ${userToken}`,
+                        "Content-Type": "application/json",
+                    },
+                });
+            }
 
             console.log("API call completed");
             console.log("Response status:", response.status);
             console.log("Response data:", response.data);
 
             // Show success message
-            Alert.alert("Success", "Item shared to public feed successfully");
+            const successMessage = isInFeed
+                ? "Item removed from public feed successfully"
+                : "Item shared to public feed successfully";
+            Alert.alert("Success", successMessage);
 
             // Refresh the history list
             fetchHistory();
         } catch (error) {
-            console.error("Error in shareToFeed function:", error);
+            console.error("Error in toggleFeedStatus function:", error);
 
             // Show a simple error message
-            Alert.alert("Error", "Failed to share to feed. Please try again.");
+            const errorAction = isInFeed ? "remove from" : "share to";
+            Alert.alert(
+                "Error",
+                `Failed to ${errorAction} feed. Please try again.`
+            );
         }
     };
 
-    const shareToFeedHandler = (item) => {
-        console.log("shareToFeedHandler called for item:", item._id);
-
-        if (item.isSharedToFeed) {
-            console.log("Item is already shared to feed");
-            Alert.alert("Info", "This item is already shared to the feed");
-            return;
-        }
-
-        // Directly call shareToFeed without confirmation for testing
-        console.log("Calling shareToFeed directly");
-        shareToFeed(item._id);
-    };
-
-    const confirmShareToFeed = (id) => {
-        console.log("confirmShareToFeed called for id:", id);
-        Alert.alert(
-            "Share to Public Feed",
-            "Are you sure you want to share this item to the public feed? It will be visible to all users of the app.",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Share",
-                    onPress: () => shareToFeed(id),
-                },
-            ]
-        );
-    };
+    // No additional handler functions needed as we're directly using toggleFeedStatus
 
     const renderHistoryItem = ({ item }) => (
         <View style={styles.historyItem}>
@@ -331,22 +333,24 @@ export default function HistoryScreen({ navigation }) {
                                 styles.actionButton,
                                 styles.feedButtonLarge,
                                 item.isSharedToFeed
-                                    ? styles.feedButtonDisabled
+                                    ? styles.removeFromFeedButton
                                     : styles.feedButton,
                             ]}
                             activeOpacity={0.5}
                             onPress={() => {
-                                console.log("Share to Feed button pressed");
+                                console.log("Toggle Feed button pressed");
                                 Alert.alert(
                                     "Button Pressed",
-                                    "Share to Feed button was pressed"
+                                    item.isSharedToFeed
+                                        ? "Removing from feed..."
+                                        : "Sharing to feed..."
                                 );
-                                shareToFeed(item._id);
+                                toggleFeedStatus(item._id);
                             }}
                         >
                             <Text style={styles.actionButtonText}>
                                 {item.isSharedToFeed
-                                    ? "In Feed"
+                                    ? "Remove from Feed"
                                     : "Share to Feed"}
                             </Text>
                         </TouchableOpacity>
@@ -628,6 +632,9 @@ const styles = StyleSheet.create({
     feedButtonDisabled: {
         backgroundColor: "#d0a6e0",
         opacity: 0.7,
+    },
+    removeFromFeedButton: {
+        backgroundColor: "#ff9800", // Orange color for remove action
     },
     deleteButton: {
         backgroundColor: "#f44336",
