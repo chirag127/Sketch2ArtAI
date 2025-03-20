@@ -13,6 +13,7 @@ require("dotenv").config();
 // Import models
 const ImageHistory = require("./models/ImageHistory");
 const User = require("./models/User");
+const PublicFeed = require("./models/PublicFeed");
 
 // Import middleware
 const auth = require("./middleware/auth");
@@ -545,6 +546,129 @@ app.delete("/api/history/:id", auth, async (req, res) => {
         console.error("Error deleting history item:", error);
         res.status(500).json({
             error: "Failed to delete history item",
+            details: error.message,
+        });
+    }
+});
+
+// API endpoint to get public feed items
+app.get("/api/feed", async (req, res) => {
+    try {
+        const feedItems = await PublicFeed.find({})
+            .sort({ createdAt: -1 })
+            .populate("user", "email")
+            .limit(50);
+        res.json(feedItems);
+    } catch (error) {
+        console.error("Error fetching public feed:", error);
+        res.status(500).json({
+            error: "Failed to fetch public feed",
+            details: error.message,
+        });
+    }
+});
+
+// API endpoint to share a history item to the public feed
+app.post("/api/feed/share/:historyId", auth, async (req, res) => {
+    try {
+        const { historyId } = req.params;
+
+        // Find the history item
+        const historyItem = await ImageHistory.findById(historyId);
+
+        // Check if history item exists
+        if (!historyItem) {
+            return res.status(404).json({ error: "History item not found" });
+        }
+
+        // Check if user owns the history item
+        if (
+            historyItem.user &&
+            historyItem.user.toString() !== req.user._id.toString()
+        ) {
+            return res
+                .status(403)
+                .json({ error: "Not authorized to share this history item" });
+        }
+
+        // Check if already shared
+        if (historyItem.isSharedToFeed) {
+            return res
+                .status(400)
+                .json({ error: "Item already shared to feed" });
+        }
+
+        // Create a new feed item
+        const feedItem = new PublicFeed({
+            originalImageUrl: historyItem.originalImageUrl,
+            convertedImageUrl: historyItem.convertedImageUrl,
+            style: historyItem.style,
+            prompt: historyItem.prompt,
+            user: req.user._id,
+            historyItem: historyItem._id,
+        });
+
+        await feedItem.save();
+
+        // Update the history item to mark as shared
+        historyItem.isSharedToFeed = true;
+        await historyItem.save();
+
+        res.json({
+            success: true,
+            message: "Item shared to public feed successfully",
+            feedItem,
+        });
+    } catch (error) {
+        console.error("Error sharing to public feed:", error);
+        res.status(500).json({
+            error: "Failed to share to public feed",
+            details: error.message,
+        });
+    }
+});
+
+// API endpoint to remove an item from the public feed
+app.delete("/api/feed/:id", auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Find the feed item
+        const feedItem = await PublicFeed.findById(id);
+
+        // Check if feed item exists
+        if (!feedItem) {
+            return res.status(404).json({ error: "Feed item not found" });
+        }
+
+        // Check if user owns the feed item or is admin
+        if (
+            !req.user.isAdmin &&
+            feedItem.user.toString() !== req.user._id.toString()
+        ) {
+            return res
+                .status(403)
+                .json({ error: "Not authorized to remove this feed item" });
+        }
+
+        // Find the associated history item and update it
+        const historyItem = await ImageHistory.findById(feedItem.historyItem);
+        if (historyItem) {
+            historyItem.isSharedToFeed = false;
+            await historyItem.save();
+        }
+
+        // Delete the feed item
+        await PublicFeed.findByIdAndDelete(id);
+
+        res.json({
+            success: true,
+            message: "Item removed from public feed successfully",
+        });
+    } catch (error) {
+        console.error("Error removing from public feed:", error);
+        res.status(500).json({
+            error: "Failed to remove from public feed",
             details: error.message,
         });
     }

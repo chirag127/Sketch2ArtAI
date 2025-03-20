@@ -9,6 +9,7 @@ import HomeScreen from "./screens/HomeScreen";
 import BasicCanvasScreen from "./screens/BasicCanvasScreen";
 import HistoryScreen from "./screens/HistoryScreen";
 import AdminHistoryScreen from "./screens/AdminHistoryScreen";
+import FeedScreen from "./screens/FeedScreen";
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
 import VerifyEmailScreen from "./screens/VerifyEmailScreen";
@@ -30,6 +31,8 @@ function MainTabs() {
 
                     if (route.name === "HomeTab") {
                         iconName = focused ? "home" : "home-outline";
+                    } else if (route.name === "FeedTab") {
+                        iconName = focused ? "people" : "people-outline";
                     } else if (route.name === "HistoryTab") {
                         iconName = focused ? "time" : "time-outline";
                     } else if (route.name === "ProfileTab") {
@@ -50,6 +53,11 @@ function MainTabs() {
                 name="HomeTab"
                 component={HomeStack}
                 options={{ title: "Home" }}
+            />
+            <Tab.Screen
+                name="FeedTab"
+                component={FeedStack}
+                options={{ title: "Feed" }}
             />
             <Tab.Screen
                 name="HistoryTab"
@@ -105,6 +113,19 @@ function HistoryStack() {
                         fontWeight: "bold",
                     },
                 }}
+            />
+        </Stack.Navigator>
+    );
+}
+
+// Feed stack navigator
+function FeedStack() {
+    return (
+        <Stack.Navigator initialRouteName="Feed">
+            <Stack.Screen
+                name="Feed"
+                component={FeedScreen}
+                options={{ headerShown: false }}
             />
         </Stack.Navigator>
     );

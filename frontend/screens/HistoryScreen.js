@@ -149,6 +149,54 @@ export default function HistoryScreen({ navigation }) {
         );
     };
 
+    const shareToFeed = async (id) => {
+        try {
+            console.log(`Attempting to share item ${id} to feed`);
+            console.log(`API URL: ${API_URL}/feed/share/${id}`);
+            console.log(`User token available: ${!!userToken}`);
+
+            const response = await axios.post(
+                `${API_URL}/feed/share/${id}`,
+                {},
+                {
+                    headers: {
+                        Authorization: `Bearer ${userToken}`,
+                    },
+                }
+            );
+
+            console.log("Share to feed response:", response.data);
+
+            if (response.data.success) {
+                Alert.alert(
+                    "Success",
+                    "Item shared to public feed successfully"
+                );
+                fetchHistory(); // Refresh to update the UI
+            }
+        } catch (error) {
+            console.error("Error sharing to feed:", error);
+            console.error("Error details:", error.response?.data);
+            const errorMessage =
+                error.response?.data?.error || "Failed to share to public feed";
+            Alert.alert("Error", errorMessage);
+        }
+    };
+
+    const confirmShareToFeed = (id) => {
+        Alert.alert(
+            "Share to Public Feed",
+            "Are you sure you want to share this item to the public feed? It will be visible to all users of the app.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Share",
+                    onPress: () => shareToFeed(id),
+                },
+            ]
+        );
+    };
+
     const renderHistoryItem = ({ item }) => (
         <View style={styles.historyItem}>
             <TouchableOpacity
@@ -249,6 +297,25 @@ export default function HistoryScreen({ navigation }) {
                             }
                         >
                             <Text style={styles.actionButtonText}>Share</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[
+                                styles.actionButton,
+                                item.isSharedToFeed
+                                    ? styles.feedButtonDisabled
+                                    : styles.feedButton,
+                            ]}
+                            onPress={() =>
+                                !item.isSharedToFeed &&
+                                confirmShareToFeed(item._id)
+                            }
+                        >
+                            <Text style={styles.actionButtonText}>
+                                {item.isSharedToFeed
+                                    ? "In Feed"
+                                    : "Share to Feed"}
+                            </Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -481,16 +548,25 @@ const styles = StyleSheet.create({
     actionsContainer: {
         flexDirection: "row",
         justifyContent: "space-between",
+        flexWrap: "wrap",
     },
     actionButton: {
         paddingVertical: 10,
-        paddingHorizontal: 20,
+        paddingHorizontal: 15,
         borderRadius: 5,
         alignItems: "center",
-        width: "48%",
+        width: "31%",
+        marginBottom: 8,
     },
     shareButton: {
         backgroundColor: "#4a90e2",
+    },
+    feedButton: {
+        backgroundColor: "#9c27b0",
+    },
+    feedButtonDisabled: {
+        backgroundColor: "#d0a6e0",
+        opacity: 0.7,
     },
     deleteButton: {
         backgroundColor: "#f44336",

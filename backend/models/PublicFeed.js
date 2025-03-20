@@ -1,12 +1,13 @@
 const mongoose = require("mongoose");
 
-const imageHistorySchema = new mongoose.Schema({
+const publicFeedSchema = new mongoose.Schema({
     originalImageUrl: {
         type: String,
         required: true,
     },
     convertedImageUrl: {
         type: String,
+        required: true,
     },
     style: {
         type: String,
@@ -16,23 +17,21 @@ const imageHistorySchema = new mongoose.Schema({
         type: String,
         default: "",
     },
-    responseText: {
-        type: String,
-        default: "",
-    },
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
+        required: true,
     },
     createdAt: {
         type: Date,
         default: Date.now,
     },
-    // Track if this item is shared to the public feed
-    isSharedToFeed: {
-        type: Boolean,
-        default: false,
+    // Reference to the original history item
+    historyItem: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ImageHistory",
+        required: true,
     },
 });
 
-module.exports = mongoose.model("ImageHistory", imageHistorySchema);
+module.exports = mongoose.model("PublicFeed", publicFeedSchema);
