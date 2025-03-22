@@ -180,13 +180,19 @@ export default function HomeScreen({ navigation, route }) {
                 }
             }
 
-            formData.append("style", currentStyle);
+            // For "Custom Prompt Only" style, we don't send a style parameter
+            if (currentStyle !== "Custom Prompt Only") {
+                formData.append("style", currentStyle);
+            }
 
             // Add custom prompt if provided
             // If a specific prompt is passed, use that instead of the global customPrompt
             const promptToUse = specificPrompt !== null ? specificPrompt : customPrompt;
             if (promptToUse.trim()) {
                 formData.append("customPrompt", promptToUse.trim());
+            } else if (currentStyle === "Custom Prompt Only") {
+                // If "Custom Prompt Only" is selected but no prompt is provided, throw an error
+                throw new Error("Custom prompt is required when 'Custom Prompt Only' style is selected");
             }
 
             if (!isPartOfBatch) {
@@ -342,9 +348,9 @@ export default function HomeScreen({ navigation, route }) {
         setLoading(true);
 
         try {
-            // Get all styles except "All Styles"
+            // Get all styles except "All Styles" and "Custom Prompt Only"
             const stylesToConvert = styleOptions.filter(
-                (s) => s !== "All Styles"
+                (s) => s !== "All Styles" && s !== "Custom Prompt Only"
             );
 
             // Show a message to the user
@@ -436,6 +442,22 @@ export default function HomeScreen({ navigation, route }) {
             return;
         }
 
+        // Check if we need to process multiple prompts
+        const prompts = splitCustomPrompt(customPrompt);
+
+        // If "All Styles" is selected, process all styles with each prompt
+        if (style === "All Styles") {
+            await generateAllStylesWithPromptOnly();
+            return;
+        }
+
+        // If we have multiple prompts, process each one separately
+        if (prompts.length > 1) {
+            await generateWithMultiplePrompts(prompts);
+            return;
+        }
+
+        // If we have a single prompt, process it directly
         setLoading(true);
 
         try {
@@ -528,6 +550,218 @@ export default function HomeScreen({ navigation, route }) {
         }
     };
 
+    // Function to generate images with multiple prompts (no sketch)
+    const generateWithMultiplePrompts = async (prompts) => {
+        setLoading(true);
+
+        try {
+            // Show a message to the user
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Processing Multiple Prompts",
+                    `Generating images with ${prompts.length} different prompts. This may take a while.`
+                );
+            } else {
+                Alert.alert(
+                    "Processing Multiple Prompts",
+                    `Generating images with ${prompts.length} different prompts. This may take a while.`
+                );
+            }
+
+            // Process each prompt one by one
+            let successCount = 0;
+            for (const prompt of prompts) {
+                console.log(
+                    `Generating with prompt: "${prompt}" (${successCount + 1}/${prompts.length})`
+                );
+
+                // Create form data
+                const formData = new FormData();
+
+                // Add style
+                formData.append("style", style);
+
+                // Add the current prompt
+                formData.append("customPrompt", prompt);
+
+                // Add flag to indicate this is a custom prompt only request
+                formData.append("customPromptOnly", "true");
+
+                // Send to backend
+                const response = await axios.post(API_URL + "/convert", formData, {
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                        Authorization: `Bearer ${userToken}`,
+                    },
+                });
+
+                if (response.data && response.data.success) {
+                    successCount++;
+
+                    // If this is the last prompt, show the result
+                    if (successCount === prompts.length) {
+                        // Check if we have image data
+                        if (response.data.imageData) {
+                            setConvertedArt(response.data.imageData);
+
+                            // Store the image URLs if available
+                            if (response.data.convertedImageUrl) {
+                                setConvertedImageUrl(response.data.convertedImageUrl);
+                            }
+                        }
+
+                        // Set the response text if available
+                        if (response.data.responseText) {
+                            setResponseText(response.data.responseText);
+                        }
+                    }
+                }
+
+                // Small delay to avoid overwhelming the server
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+
+            // Show completion message
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Generation Complete",
+                    `Successfully generated ${successCount} out of ${prompts.length} images. Check the History tab to view all images.`
+                );
+            } else {
+                Alert.alert(
+                    "Generation Complete",
+                    `Successfully generated ${successCount} out of ${prompts.length} images. Check the History tab to view all images.`
+                );
+            }
+
+            // Clear original image since this was a prompt-only request
+            setOriginalImageUrl("");
+            setSketch(null);
+
+        } catch (error) {
+            console.error("Error generating with multiple prompts:", error);
+            if (Platform.OS === "web") {
+                showAlert("Error", "Failed to process all prompts");
+            } else {
+                Alert.alert("Error", "Failed to process all prompts");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Function to generate images with all styles and prompts (no sketch)
+    const generateAllStylesWithPromptOnly = async () => {
+        setLoading(true);
+
+        try {
+            // Get all styles except "All Styles"
+            const stylesToConvert = styleOptions.filter(
+                (s) => s !== "All Styles"
+            );
+
+            // Get all prompts
+            const prompts = splitCustomPrompt(customPrompt);
+
+            // Show a message to the user
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Generating with All Styles",
+                    `Generating images with ${prompts.length} prompts in ${stylesToConvert.length} different styles. This may take a while.`
+                );
+            } else {
+                Alert.alert(
+                    "Generating with All Styles",
+                    `Generating images with ${prompts.length} prompts in ${stylesToConvert.length} different styles. This may take a while.`
+                );
+            }
+
+            // Process each style and prompt combination
+            let successCount = 0;
+            let totalCount = stylesToConvert.length * prompts.length;
+
+            for (const currentStyle of stylesToConvert) {
+                for (const prompt of prompts) {
+                    console.log(
+                        `Generating with style: ${currentStyle}, prompt: "${prompt}" (${successCount + 1}/${totalCount})`
+                    );
+
+                    // Create form data
+                    const formData = new FormData();
+
+                    // Add style
+                    formData.append("style", currentStyle);
+
+                    // Add the current prompt
+                    formData.append("customPrompt", prompt);
+
+                    // Add flag to indicate this is a custom prompt only request
+                    formData.append("customPromptOnly", "true");
+
+                    // Send to backend
+                    const response = await axios.post(API_URL + "/convert", formData, {
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                            Authorization: `Bearer ${userToken}`,
+                        },
+                    });
+
+                    if (response.data && response.data.success) {
+                        successCount++;
+
+                        // If this is the last combination, show the result
+                        if (successCount === totalCount) {
+                            // Check if we have image data
+                            if (response.data.imageData) {
+                                setConvertedArt(response.data.imageData);
+
+                                // Store the image URLs if available
+                                if (response.data.convertedImageUrl) {
+                                    setConvertedImageUrl(response.data.convertedImageUrl);
+                                }
+                            }
+
+                            // Set the response text if available
+                            if (response.data.responseText) {
+                                setResponseText(response.data.responseText);
+                            }
+                        }
+                    }
+
+                    // Small delay to avoid overwhelming the server
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                }
+            }
+
+            // Show completion message
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Generation Complete",
+                    `Successfully generated ${successCount} out of ${totalCount} images. Check the History tab to view all images.`
+                );
+            } else {
+                Alert.alert(
+                    "Generation Complete",
+                    `Successfully generated ${successCount} out of ${totalCount} images. Check the History tab to view all images.`
+                );
+            }
+
+            // Clear original image since this was a prompt-only request
+            setOriginalImageUrl("");
+            setSketch(null);
+
+        } catch (error) {
+            console.error("Error generating with all styles:", error);
+            if (Platform.OS === "web") {
+                showAlert("Error", "Failed to process all styles and prompts");
+            } else {
+                Alert.alert("Error", "Failed to process all styles and prompts");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Main convert function that decides whether to convert to one style or all styles
     const convertSketch = async () => {
         if (!sketch) {
@@ -548,6 +782,22 @@ export default function HomeScreen({ navigation, route }) {
         // If "All Styles" is selected, convert to all styles
         if (style === "All Styles") {
             convertAllStyles();
+            return;
+        }
+
+        // Check if "Custom Prompt Only" is selected but no prompt is provided
+        if (style === "Custom Prompt Only" && !customPrompt.trim()) {
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Custom Prompt Required",
+                    "Please enter a custom prompt when 'Custom Prompt Only' style is selected"
+                );
+            } else {
+                Alert.alert(
+                    "Custom Prompt Required",
+                    "Please enter a custom prompt when 'Custom Prompt Only' style is selected"
+                );
+            }
             return;
         }
 
@@ -776,6 +1026,7 @@ export default function HomeScreen({ navigation, route }) {
 
     const styleOptions = [
         "All Styles", // Added All Styles option at the top
+        "Custom Prompt Only", // Added option for custom prompt without style
         "Cyberpunk Neon",
         "Watercolor Wash",
         "Retro Pixel Art",
@@ -896,7 +1147,9 @@ export default function HomeScreen({ navigation, route }) {
                             <ActivityIndicator color="#fff" />
                         ) : (
                             <Text style={styles.convertButtonText}>
-                                {customPrompt.trim()
+                                {style === "Custom Prompt Only"
+                                    ? "Generate with Custom Prompt"
+                                    : customPrompt.trim()
                                     ? "Convert with Custom Prompt"
                                     : `Convert to ${style}`}
                             </Text>

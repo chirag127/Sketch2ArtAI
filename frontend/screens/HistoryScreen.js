@@ -636,6 +636,21 @@ export default function HistoryScreen({ navigation }) {
 
     // Function to process a single conversion
     const processConversion = async (style, customPrompt) => {
+        // Check if "Custom Prompt Only" is selected but no prompt is provided
+        if (style === "Custom Prompt Only" && !customPrompt.trim()) {
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Custom Prompt Required",
+                    "Please enter a custom prompt when 'Custom Prompt Only' style is selected"
+                );
+            } else {
+                Alert.alert(
+                    "Custom Prompt Required",
+                    "Please enter a custom prompt when 'Custom Prompt Only' style is selected"
+                );
+            }
+            return false;
+        }
         try {
             // Create form data
             const formData = new FormData();

@@ -110,8 +110,8 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
         let fileBase64;
         let mimeType;
 
-        // Check if this is a custom prompt only request
-        const isCustomPromptOnly = req.body.customPromptOnly === 'true';
+        // Check if this is a custom prompt only request or if the style is "Custom Prompt Only"
+        const isCustomPromptOnly = req.body.customPromptOnly === 'true' || req.body.style === 'Custom Prompt Only';
 
         if (!isCustomPromptOnly && !req.file && !req.body.base64Data) {
             console.error("Error: No file or base64 data provided");
@@ -123,8 +123,13 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
         }
 
         // Get style and custom prompt
-        const style = req.body.style || "Anime"; // Default style is Anime
+        let style = req.body.style || "Anime"; // Default style is Anime
         const customPrompt = req.body.customPrompt || ""; // Get custom prompt if provided
+
+        // If style is "Custom Prompt Only", use a generic style for the AI
+        if (style === "Custom Prompt Only") {
+            style = "realistic";
+        }
 
         // Handle custom prompt only requests
         if (isCustomPromptOnly) {
@@ -231,8 +236,11 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
             promptMessage = `Convert this sketch into ${style} style art`;
         }
 
-        // Add custom prompt if provided
-        if (customPrompt) {
+        // For Custom Prompt Only style, use the custom prompt directly
+        if (style === "Custom Prompt Only" || req.body.style === "Custom Prompt Only") {
+            promptMessage = `Generate an image with the following prompt: ${customPrompt}`;
+        } else if (customPrompt) {
+            // Add custom prompt if provided
             promptMessage = `${promptMessage}- Additional prompt: ${customPrompt}`;
         }
 
@@ -379,9 +387,13 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
             if (!isCustomPromptOnly && fileBase64) {
                 console.log("Uploading original sketch to image host...");
                 originalImageUrl = await uploadToFreeImageHost(fileBase64);
-            } else {
+            } else if (isCustomPromptOnly) {
                 // For custom prompt only, no original image
+                console.log("Custom prompt only request - skipping original image upload");
                 originalImageUrl = "";
+            } else {
+                console.error("Error: No file data to upload");
+                return res.status(400).json({ error: "No file data to upload" });
             }
 
             // Only upload converted art if we have an image
@@ -398,6 +410,7 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
                 prompt: customPrompt || "",
                 responseText,
                 user: req.user._id, // Add user reference
+                isCustomPromptOnly: isCustomPromptOnly, // Set the flag for custom prompt only requests
             });
 
             await historyItem.save();

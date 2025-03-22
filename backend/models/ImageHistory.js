@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const imageHistorySchema = new mongoose.Schema({
     originalImageUrl: {
         type: String,
-        required: true,
+        default: "", // Make it optional for custom prompt only requests
     },
     convertedImageUrl: {
         type: String,
@@ -30,6 +30,10 @@ const imageHistorySchema = new mongoose.Schema({
     },
     // Track if this item is shared to the public feed
     isSharedToFeed: {
+        type: Boolean,
+        default: false,
+    },
+    isCustomPromptOnly: {
         type: Boolean,
         default: false,
     },

@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const publicFeedSchema = new mongoose.Schema({
     originalImageUrl: {
         type: String,
-        required: true,
+        default: "", // Make it optional for custom prompt only requests
     },
     convertedImageUrl: {
         type: String,

@@ -22,6 +22,7 @@ const ConversionModal = ({
     const [customPrompt, setCustomPrompt] = useState("");
 
     const styleOptions = [
+        "Custom Prompt Only", // Added option for custom prompt without style
         "Cyberpunk Neon",
         "Watercolor Wash",
         "Retro Pixel Art",
@@ -49,6 +50,14 @@ const ConversionModal = ({
     ];
 
     const handleConvert = () => {
+        // Check if "Custom Prompt Only" is selected but no prompt is provided
+        if (selectedStyle === "Custom Prompt Only" && !customPrompt.trim()) {
+            Alert.alert(
+                "Custom Prompt Required",
+                "Please enter a custom prompt when 'Custom Prompt Only' style is selected"
+            );
+            return;
+        }
         onConvert(selectedStyle, customPrompt);
     };
 
@@ -121,7 +130,9 @@ const ConversionModal = ({
                                 <ActivityIndicator color="#fff" size="small" />
                             ) : (
                                 <Text style={styles.convertButtonText}>
-                                    {customPrompt.trim()
+                                    {selectedStyle === "Custom Prompt Only"
+                                        ? "Generate with Custom Prompt"
+                                        : customPrompt.trim()
                                         ? "Convert with Custom Prompt"
                                         : `Convert to ${selectedStyle}`}
                                 </Text>
