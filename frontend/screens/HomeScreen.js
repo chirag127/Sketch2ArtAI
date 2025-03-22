@@ -111,23 +111,27 @@ export default function HomeScreen({ navigation, route }) {
         }
     };
 
-    const convertSketch = async () => {
+    // Function to convert sketch to a specific style
+    const convertSketchToStyle = async (
+        currentStyle,
+        isPartOfBatch = false
+    ) => {
         if (!sketch) {
-            if (Platform.OS === "web") {
-                showAlert(
-                    "No sketch",
-                    "Please select or create a sketch first"
-                );
-            } else {
-                Alert.alert(
-                    "No sketch",
-                    "Please select or create a sketch first"
-                );
+            if (!isPartOfBatch) {
+                if (Platform.OS === "web") {
+                    showAlert(
+                        "No sketch",
+                        "Please select or create a sketch first"
+                    );
+                } else {
+                    Alert.alert(
+                        "No sketch",
+                        "Please select or create a sketch first"
+                    );
+                }
             }
-            return;
+            return null;
         }
-
-        setLoading(true);
 
         try {
             // Create form data
@@ -153,7 +157,11 @@ export default function HomeScreen({ navigation, route }) {
                     formData.append("base64Data", base64Data);
                     formData.append("mimeType", mime);
 
-                    console.log("Sending base64 data directly (web platform)");
+                    if (!isPartOfBatch) {
+                        console.log(
+                            "Sending base64 data directly (web platform)"
+                        );
+                    }
                 } catch (error) {
                     console.error("Error processing data URI:", error);
                     throw new Error("Failed to process the sketch image");
@@ -166,18 +174,22 @@ export default function HomeScreen({ navigation, route }) {
                     type: mimeType,
                 });
 
-                console.log("Sending file data (native platform)");
+                if (!isPartOfBatch) {
+                    console.log("Sending file data (native platform)");
+                }
             }
 
-            formData.append("style", style);
+            formData.append("style", currentStyle);
 
             // Add custom prompt if provided
             if (customPrompt.trim()) {
                 formData.append("customPrompt", customPrompt.trim());
             }
 
-            console.log("Sending request to:", API_URL + "/convert");
-            console.log("FormData keys:", [...formData.keys()]);
+            if (!isPartOfBatch) {
+                console.log("Sending request to:", API_URL + "/convert");
+                console.log("FormData keys:", [...formData.keys()]);
+            }
 
             // Send to backend
             const response = await axios.post(API_URL + "/convert", formData, {
@@ -187,18 +199,161 @@ export default function HomeScreen({ navigation, route }) {
                 },
             });
 
-            if (response.data && response.data.success) {
+            return response.data;
+        } catch (error) {
+            console.error(`Error converting sketch to ${currentStyle}:`, error);
+            if (!isPartOfBatch) {
+                // More detailed error logging
+                if (error.response) {
+                    console.error("Error response data:", error.response.data);
+                    console.error(
+                        "Error response status:",
+                        error.response.status
+                    );
+
+                    Alert.alert(
+                        "Error",
+                        `Failed to convert sketch: ${
+                            error.response.status
+                        } - ${JSON.stringify(error.response.data)}`
+                    );
+                } else if (error.request) {
+                    console.error("Error request:", error.request);
+                    Alert.alert(
+                        "Error",
+                        "No response from server. Please check your connection."
+                    );
+                } else {
+                    console.error("Error message:", error.message);
+                    Alert.alert(
+                        "Error",
+                        `Failed to convert sketch: ${error.message}`
+                    );
+                }
+            }
+            return null;
+        }
+    };
+
+    // Function to convert sketch to all styles
+    const convertAllStyles = async () => {
+        if (!sketch) {
+            if (Platform.OS === "web") {
+                showAlert(
+                    "No sketch",
+                    "Please select or create a sketch first"
+                );
+            } else {
+                Alert.alert(
+                    "No sketch",
+                    "Please select or create a sketch first"
+                );
+            }
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            // Get all styles except "All Styles"
+            const stylesToConvert = styleOptions.filter(
+                (s) => s !== "All Styles"
+            );
+
+            // Show a message to the user
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Converting to All Styles",
+                    `Converting your sketch to ${stylesToConvert.length} different styles. This may take a while.`
+                );
+            } else {
+                Alert.alert(
+                    "Converting to All Styles",
+                    `Converting your sketch to ${stylesToConvert.length} different styles. This may take a while.`
+                );
+            }
+
+            // Convert to each style one by one
+            let successCount = 0;
+            for (const currentStyle of stylesToConvert) {
+                console.log(
+                    `Converting to ${currentStyle} (${successCount + 1}/${
+                        stylesToConvert.length
+                    })`
+                );
+                const result = await convertSketchToStyle(currentStyle, true);
+                if (result && result.success) {
+                    successCount++;
+                }
+                // Small delay to avoid overwhelming the server
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+
+            // Show completion message
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Conversion Complete",
+                    `Successfully converted to ${successCount} out of ${stylesToConvert.length} styles. Check the History tab to view all conversions.`
+                );
+            } else {
+                Alert.alert(
+                    "Conversion Complete",
+                    `Successfully converted to ${successCount} out of ${stylesToConvert.length} styles. Check the History tab to view all conversions.`
+                );
+            }
+        } catch (error) {
+            console.error("Error in batch conversion:", error);
+            if (Platform.OS === "web") {
+                showAlert("Error", "Failed to complete all conversions");
+            } else {
+                Alert.alert("Error", "Failed to complete all conversions");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Main convert function that decides whether to convert to one style or all styles
+    const convertSketch = async () => {
+        if (!sketch) {
+            if (Platform.OS === "web") {
+                showAlert(
+                    "No sketch",
+                    "Please select or create a sketch first"
+                );
+            } else {
+                Alert.alert(
+                    "No sketch",
+                    "Please select or create a sketch first"
+                );
+            }
+            return;
+        }
+
+        // If "All Styles" is selected, convert to all styles
+        if (style === "All Styles") {
+            convertAllStyles();
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            // Use the convertSketchToStyle function
+            const result = await convertSketchToStyle(style);
+
+            if (result && result.success) {
                 // Check if we have image data
-                if (response.data.hasImage && response.data.imageData) {
-                    setConvertedArt(response.data.imageData);
+                if (result.imageData) {
+                    setConvertedArt(result.imageData);
 
                     // Store the image URLs if available
-                    if (response.data.convertedImageUrl) {
+                    if (result.convertedImageUrl) {
                         console.log(
                             "Converted image URL:",
-                            response.data.convertedImageUrl
+                            result.convertedImageUrl
                         );
-                        setConvertedImageUrl(response.data.convertedImageUrl);
+                        setConvertedImageUrl(result.convertedImageUrl);
                     }
                 } else {
                     // Text-only response
@@ -207,19 +362,16 @@ export default function HomeScreen({ navigation, route }) {
                 }
 
                 // Set the response text if available
-                if (response.data.responseText) {
-                    setResponseText(response.data.responseText);
+                if (result.responseText) {
+                    setResponseText(result.responseText);
                 } else {
                     setResponseText("");
                 }
 
                 // Store the original image URL if available
-                if (response.data.originalImageUrl) {
-                    console.log(
-                        "Original image URL:",
-                        response.data.originalImageUrl
-                    );
-                    setOriginalImageUrl(response.data.originalImageUrl);
+                if (result.originalImageUrl) {
+                    console.log("Original image URL:", result.originalImageUrl);
+                    setOriginalImageUrl(result.originalImageUrl);
                 }
             } else {
                 Alert.alert("Error", "Failed to convert sketch");
@@ -228,35 +380,7 @@ export default function HomeScreen({ navigation, route }) {
             }
         } catch (error) {
             console.error("Error converting sketch:", error);
-
-            // More detailed error logging
-            if (error.response) {
-                // The request was made and the server responded with a status code
-                // that falls out of the range of 2xx
-                console.error("Error response data:", error.response.data);
-                console.error("Error response status:", error.response.status);
-
-                Alert.alert(
-                    "Error",
-                    `Failed to convert sketch: ${
-                        error.response.status
-                    } - ${JSON.stringify(error.response.data)}`
-                );
-            } else if (error.request) {
-                // The request was made but no response was received
-                console.error("Error request:", error.request);
-                Alert.alert(
-                    "Error",
-                    "No response from server. Please check your connection."
-                );
-            } else {
-                // Something happened in setting up the request that triggered an Error
-                console.error("Error message:", error.message);
-                Alert.alert(
-                    "Error",
-                    `Failed to convert sketch: ${error.message}`
-                );
-            }
+            // Error handling is already done in convertSketchToStyle
         } finally {
             setLoading(false);
         }
