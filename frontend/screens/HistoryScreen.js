@@ -548,11 +548,94 @@ export default function HistoryScreen({ navigation }) {
         setConversionModalVisible(true);
     };
 
+    // Function to split custom prompt by line breaks and commas
+    const splitCustomPrompt = (prompt) => {
+        if (!prompt || !prompt.trim()) return [];
+
+        // First split by line breaks
+        const lineSegments = prompt.split(/\r?\n/);
+
+        // Then split each line by commas and flatten the array
+        const allSegments = lineSegments.flatMap(line => {
+            // Skip empty lines
+            if (!line.trim()) return [];
+            // Split by comma and trim each segment
+            return line.split(',').map(segment => segment.trim()).filter(segment => segment);
+        });
+
+        return allSegments;
+    };
+
     // Function to handle the conversion
     const handleConvertImage = async (style, customPrompt) => {
         if (!imageToConvert) return;
 
         setIsConverting(true);
+
+        // Check if we need to process multiple prompts
+        const prompts = splitCustomPrompt(customPrompt);
+        const hasMultiplePrompts = prompts.length > 0;
+
+        if (hasMultiplePrompts) {
+            try {
+                // Show a message to the user
+                if (Platform.OS === "web") {
+                    showAlert(
+                        "Processing Multiple Prompts",
+                        `Converting your image with ${prompts.length} different prompts. This may take a while.`
+                    );
+                } else {
+                    Alert.alert(
+                        "Processing Multiple Prompts",
+                        `Converting your image with ${prompts.length} different prompts. This may take a while.`
+                    );
+                }
+
+                // Process each prompt
+                let successCount = 0;
+                for (const prompt of prompts) {
+                    console.log(`Converting with prompt: "${prompt}"`);
+                    await processConversion(style, prompt);
+                    successCount++;
+                    // Small delay to avoid overwhelming the server
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                }
+
+                // Show completion message
+                if (Platform.OS === "web") {
+                    showAlert(
+                        "Conversion Complete",
+                        `Successfully converted with ${successCount} out of ${prompts.length} prompts. Check your history.`
+                    );
+                } else {
+                    Alert.alert(
+                        "Conversion Complete",
+                        `Successfully converted with ${successCount} out of ${prompts.length} prompts. Check your history.`
+                    );
+                }
+
+                // Close modal and refresh history
+                setConversionModalVisible(false);
+                fetchHistory();
+            } catch (error) {
+                console.error("Error processing multiple prompts:", error);
+                if (Platform.OS === "web") {
+                    showAlert("Error", "Failed to process all prompts");
+                } else {
+                    Alert.alert("Error", "Failed to process all prompts");
+                }
+            } finally {
+                setIsConverting(false);
+            }
+            return;
+        }
+
+        // If no multiple prompts, process normally
+        await processConversion(style, customPrompt);
+    };
+
+    // Function to process a single conversion
+    const processConversion = async (style, customPrompt) => {
         try {
             // Create form data
             const formData = new FormData();
@@ -604,21 +687,26 @@ export default function HistoryScreen({ navigation }) {
             });
 
             if (response.data && response.data.success) {
-                // Close modal and refresh history
-                setConversionModalVisible(false);
-                fetchHistory();
+                // For single prompt conversions, show success message and close modal
+                if (!splitCustomPrompt(customPrompt).length) {
+                    // Close modal and refresh history
+                    setConversionModalVisible(false);
+                    fetchHistory();
 
-                if (Platform.OS === "web") {
-                    showAlert("Success", "Image converted successfully");
-                } else {
-                    Alert.alert("Success", "Image converted successfully");
+                    if (Platform.OS === "web") {
+                        showAlert("Success", "Image converted successfully");
+                    } else {
+                        Alert.alert("Success", "Image converted successfully");
+                    }
                 }
+                return true;
             } else {
                 if (Platform.OS === "web") {
                     showAlert("Error", "Failed to convert image");
                 } else {
                     Alert.alert("Error", "Failed to convert image");
                 }
+                return false;
             }
         } catch (error) {
             console.error("Error converting image:", error);
@@ -627,8 +715,12 @@ export default function HistoryScreen({ navigation }) {
             } else {
                 Alert.alert("Error", "Failed to convert image");
             }
+            return false;
         } finally {
-            setIsConverting(false);
+            // Only set isConverting to false if we're not in a batch process
+            if (!splitCustomPrompt(customPrompt).length) {
+                setIsConverting(false);
+            }
         }
     };
 

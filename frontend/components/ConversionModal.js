@@ -95,7 +95,7 @@ const ConversionModal = ({
                     <Text style={styles.sectionTitle}>Custom Prompt (Optional)</Text>
                     <TextInput
                         style={styles.customPromptInput}
-                        placeholder="Enter custom instructions for the AI..."
+                        placeholder="Enter custom instructions (separate multiple prompts with commas or line breaks)"
                         placeholderTextColor="#999"
                         value={customPrompt}
                         onChangeText={setCustomPrompt}

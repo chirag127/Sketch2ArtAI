@@ -114,7 +114,8 @@ export default function HomeScreen({ navigation, route }) {
     // Function to convert sketch to a specific style
     const convertSketchToStyle = async (
         currentStyle,
-        isPartOfBatch = false
+        isPartOfBatch = false,
+        specificPrompt = null
     ) => {
         if (!sketch) {
             if (!isPartOfBatch) {
@@ -182,8 +183,10 @@ export default function HomeScreen({ navigation, route }) {
             formData.append("style", currentStyle);
 
             // Add custom prompt if provided
-            if (customPrompt.trim()) {
-                formData.append("customPrompt", customPrompt.trim());
+            // If a specific prompt is passed, use that instead of the global customPrompt
+            const promptToUse = specificPrompt !== null ? specificPrompt : customPrompt;
+            if (promptToUse.trim()) {
+                formData.append("customPrompt", promptToUse.trim());
             }
 
             if (!isPartOfBatch) {
@@ -235,6 +238,90 @@ export default function HomeScreen({ navigation, route }) {
         }
     };
 
+    // Function to split custom prompt by line breaks and commas
+    const splitCustomPrompt = (prompt) => {
+        if (!prompt || !prompt.trim()) return [];
+
+        // First split by line breaks
+        const lineSegments = prompt.split(/\r?\n/);
+
+        // Then split each line by commas and flatten the array
+        const allSegments = lineSegments.flatMap(line => {
+            // Skip empty lines
+            if (!line.trim()) return [];
+            // Split by comma and trim each segment
+            return line.split(',').map(segment => segment.trim()).filter(segment => segment);
+        });
+
+        return allSegments;
+    };
+
+    // Function to process multiple prompts
+    const processMultiplePrompts = async (currentStyle) => {
+        const prompts = splitCustomPrompt(customPrompt);
+
+        if (prompts.length === 0) {
+            // If no valid prompts after splitting, just use the regular conversion
+            return await convertSketchToStyle(currentStyle);
+        }
+
+        setLoading(true);
+
+        try {
+            // Show a message to the user
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Processing Multiple Prompts",
+                    `Converting your sketch with ${prompts.length} different prompts. This may take a while.`
+                );
+            } else {
+                Alert.alert(
+                    "Processing Multiple Prompts",
+                    `Converting your sketch with ${prompts.length} different prompts. This may take a while.`
+                );
+            }
+
+            // Convert with each prompt one by one
+            let successCount = 0;
+            for (const prompt of prompts) {
+                console.log(
+                    `Converting with prompt: "${prompt}" (${successCount + 1}/${prompts.length})`
+                );
+                const result = await convertSketchToStyle(currentStyle, true, prompt);
+                if (result && result.success) {
+                    successCount++;
+                }
+                // Small delay to avoid overwhelming the server
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+
+            // Show completion message
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Conversion Complete",
+                    `Successfully converted with ${successCount} out of ${prompts.length} prompts. Check the History tab to view all conversions.`
+                );
+            } else {
+                Alert.alert(
+                    "Conversion Complete",
+                    `Successfully converted with ${successCount} out of ${prompts.length} prompts. Check the History tab to view all conversions.`
+                );
+            }
+
+            return { success: true };
+        } catch (error) {
+            console.error("Error processing multiple prompts:", error);
+            if (Platform.OS === "web") {
+                showAlert("Error", "Failed to process all prompts");
+            } else {
+                Alert.alert("Error", "Failed to process all prompts");
+            }
+            return null;
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Function to convert sketch to all styles
     const convertAllStyles = async () => {
         if (!sketch) {
@@ -273,6 +360,10 @@ export default function HomeScreen({ navigation, route }) {
                 );
             }
 
+            // Check if we need to process multiple prompts
+            const prompts = splitCustomPrompt(customPrompt);
+            const hasMultiplePrompts = prompts.length > 0;
+
             // Convert to each style one by one
             let successCount = 0;
             for (const currentStyle of stylesToConvert) {
@@ -281,12 +372,27 @@ export default function HomeScreen({ navigation, route }) {
                         stylesToConvert.length
                     })`
                 );
-                const result = await convertSketchToStyle(currentStyle, true);
-                if (result && result.success) {
-                    successCount++;
+
+                if (hasMultiplePrompts) {
+                    // Process each prompt for this style
+                    for (const prompt of prompts) {
+                        console.log(`Processing prompt: "${prompt}" for style: ${currentStyle}`);
+                        const result = await convertSketchToStyle(currentStyle, true, prompt);
+                        if (result && result.success) {
+                            successCount++;
+                        }
+                        // Small delay to avoid overwhelming the server
+                        await new Promise((resolve) => setTimeout(resolve, 1000));
+                    }
+                } else {
+                    // Regular conversion with the global custom prompt
+                    const result = await convertSketchToStyle(currentStyle, true);
+                    if (result && result.success) {
+                        successCount++;
+                    }
+                    // Small delay to avoid overwhelming the server
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
                 }
-                // Small delay to avoid overwhelming the server
-                await new Promise((resolve) => setTimeout(resolve, 1000));
             }
 
             // Show completion message
@@ -333,6 +439,14 @@ export default function HomeScreen({ navigation, route }) {
         // If "All Styles" is selected, convert to all styles
         if (style === "All Styles") {
             convertAllStyles();
+            return;
+        }
+
+        // Check if we need to process multiple prompts
+        const prompts = splitCustomPrompt(customPrompt);
+        if (prompts.length > 0) {
+            // Process multiple prompts
+            await processMultiplePrompts(style);
             return;
         }
 
@@ -648,7 +762,7 @@ export default function HomeScreen({ navigation, route }) {
                 <View style={styles.customPromptContainer}>
                     <TextInput
                         style={styles.customPromptInput}
-                        placeholder="Enter custom instructions for the AI..."
+                        placeholder="Enter custom instructions (separate multiple prompts with commas or line breaks)"
                         placeholderTextColor="#999"
                         value={customPrompt}
                         onChangeText={setCustomPrompt}
