@@ -428,6 +428,7 @@ export default function HomeScreen({ navigation, route }) {
     };
 
     const styleOptions = [
+        "All Styles", // Added All Styles option at the top
         "Cyberpunk Neon",
         "Watercolor Wash",
         "Retro Pixel Art",

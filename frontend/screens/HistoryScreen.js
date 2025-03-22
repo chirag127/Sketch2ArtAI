@@ -18,6 +18,7 @@ import axios from "axios";
 import { API_URL } from "../env";
 import Markdown from "react-native-markdown-display";
 import * as FileSystem from "expo-file-system";
+import ConversionModal from "../components/ConversionModal";
 
 export default function HistoryScreen({ navigation }) {
     const { userToken, userInfo } = useContext(AuthContext);
@@ -27,6 +28,10 @@ export default function HistoryScreen({ navigation }) {
     const [refreshing, setRefreshing] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
     const [loadingItemId, setLoadingItemId] = useState(null); // Track which item is being processed
+    const [conversionModalVisible, setConversionModalVisible] = useState(false);
+    const [isConverting, setIsConverting] = useState(false);
+    const [imageToConvert, setImageToConvert] = useState(null); // URL of the image to convert
+    const [imageType, setImageType] = useState(null); // 'original' or 'converted'
 
     const fetchHistory = async () => {
         try {
@@ -385,19 +390,29 @@ export default function HistoryScreen({ navigation }) {
                                 style={styles.detailImage}
                                 resizeMode="contain"
                             />
-                            <TouchableOpacity
-                                style={styles.downloadButton}
-                                onPress={() =>
-                                    downloadImage(
-                                        item.originalImageUrl,
-                                        `original_${Date.now()}.png`
-                                    )
-                                }
-                            >
-                                <Text style={styles.downloadButtonText}>
-                                    Download
-                                </Text>
-                            </TouchableOpacity>
+                            <View style={styles.imageButtonsContainer}>
+                                <TouchableOpacity
+                                    style={styles.downloadButton}
+                                    onPress={() =>
+                                        downloadImage(
+                                            item.originalImageUrl,
+                                            `original_${Date.now()}.png`
+                                        )
+                                    }
+                                >
+                                    <Text style={styles.downloadButtonText}>
+                                        Download
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.convertButton}
+                                    onPress={() => handleOpenConversionModal(item.originalImageUrl, 'original')}
+                                >
+                                    <Text style={styles.convertButtonText}>
+                                        Convert Again
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
                         <View style={styles.imageWrapper}>
@@ -407,19 +422,29 @@ export default function HistoryScreen({ navigation }) {
                                 style={styles.detailImage}
                                 resizeMode="contain"
                             />
-                            <TouchableOpacity
-                                style={styles.downloadButton}
-                                onPress={() =>
-                                    downloadImage(
-                                        item.convertedImageUrl,
-                                        `converted_${Date.now()}.png`
-                                    )
-                                }
-                            >
-                                <Text style={styles.downloadButtonText}>
-                                    Download
-                                </Text>
-                            </TouchableOpacity>
+                            <View style={styles.imageButtonsContainer}>
+                                <TouchableOpacity
+                                    style={styles.downloadButton}
+                                    onPress={() =>
+                                        downloadImage(
+                                            item.convertedImageUrl,
+                                            `converted_${Date.now()}.png`
+                                        )
+                                    }
+                                >
+                                    <Text style={styles.downloadButtonText}>
+                                        Download
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.convertButton}
+                                    onPress={() => handleOpenConversionModal(item.convertedImageUrl, 'converted')}
+                                >
+                                    <Text style={styles.convertButtonText}>
+                                        Convert Again
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
 
@@ -516,6 +541,97 @@ export default function HistoryScreen({ navigation }) {
         );
     }
 
+    // Function to handle opening the conversion modal
+    const handleOpenConversionModal = (imageUrl, type) => {
+        setImageToConvert(imageUrl);
+        setImageType(type);
+        setConversionModalVisible(true);
+    };
+
+    // Function to handle the conversion
+    const handleConvertImage = async (style, customPrompt) => {
+        if (!imageToConvert) return;
+
+        setIsConverting(true);
+        try {
+            // Create form data
+            const formData = new FormData();
+
+            // For web platform, we need to handle base64 data
+            if (Platform.OS === "web") {
+                // Fetch the image and convert to base64
+                const response = await fetch(imageToConvert);
+                const blob = await response.blob();
+
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+
+                await new Promise((resolve) => {
+                    reader.onloadend = () => {
+                        // Get base64 data without the prefix
+                        const base64data = reader.result.split(',')[1];
+                        formData.append("base64Data", base64data);
+                        formData.append("mimeType", blob.type);
+                        resolve();
+                    };
+                });
+            } else {
+                // For native platforms, download the image first
+                const filename = `temp_${Date.now()}.png`;
+                const localUri = FileSystem.documentDirectory + filename;
+                await FileSystem.downloadAsync(imageToConvert, localUri);
+
+                // Append the file to form data
+                formData.append("sketch", {
+                    uri: localUri,
+                    name: filename,
+                    type: "image/png",
+                });
+            }
+
+            // Add style and custom prompt
+            formData.append("style", style);
+            if (customPrompt.trim()) {
+                formData.append("customPrompt", customPrompt.trim());
+            }
+
+            // Send to backend
+            const response = await axios.post(API_URL + "/convert", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                    Authorization: `Bearer ${userToken}`,
+                },
+            });
+
+            if (response.data && response.data.success) {
+                // Close modal and refresh history
+                setConversionModalVisible(false);
+                fetchHistory();
+
+                if (Platform.OS === "web") {
+                    showAlert("Success", "Image converted successfully");
+                } else {
+                    Alert.alert("Success", "Image converted successfully");
+                }
+            } else {
+                if (Platform.OS === "web") {
+                    showAlert("Error", "Failed to convert image");
+                } else {
+                    Alert.alert("Error", "Failed to convert image");
+                }
+            }
+        } catch (error) {
+            console.error("Error converting image:", error);
+            if (Platform.OS === "web") {
+                showAlert("Error", "Failed to convert image");
+            } else {
+                Alert.alert("Error", "Failed to convert image");
+            }
+        } finally {
+            setIsConverting(false);
+        }
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.headerContainer}>
@@ -561,6 +677,15 @@ export default function HistoryScreen({ navigation }) {
                     onRefresh={handleRefresh}
                 />
             )}
+
+            {/* Conversion Modal */}
+            <ConversionModal
+                visible={conversionModalVisible}
+                onClose={() => setConversionModalVisible(false)}
+                onConvert={handleConvertImage}
+                isConverting={isConverting}
+                imageType={imageType}
+            />
         </View>
     );
 }
@@ -706,15 +831,37 @@ const styles = StyleSheet.create({
         width: "100%",
         height: 150,
         borderRadius: 5,
+        marginBottom: 5,
+    },
+    imageButtonsContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
         marginBottom: 10,
     },
     downloadButton: {
         backgroundColor: "#4CAF50",
         paddingVertical: 8,
+        paddingHorizontal: 15,
         borderRadius: 5,
         alignItems: "center",
+        flex: 1,
+        marginRight: 5,
     },
     downloadButtonText: {
+        color: "white",
+        fontSize: 14,
+        fontWeight: "600",
+    },
+    convertButton: {
+        backgroundColor: "#9c27b0",
+        paddingVertical: 8,
+        paddingHorizontal: 15,
+        borderRadius: 5,
+        alignItems: "center",
+        flex: 1,
+        marginLeft: 5,
+    },
+    convertButtonText: {
         color: "white",
         fontSize: 14,
         fontWeight: "600",
