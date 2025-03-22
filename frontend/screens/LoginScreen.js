@@ -13,6 +13,7 @@ import {
     Dimensions,
     Animated,
 } from "react-native";
+import PasswordInput from "../components/PasswordInput";
 import AuthContext from "../context/AuthContext";
 
 export default function LoginScreen({ navigation }) {
@@ -160,12 +161,11 @@ export default function LoginScreen({ navigation }) {
 
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Password</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Enter your password"
+                        <PasswordInput
                             value={password}
                             onChangeText={setPassword}
-                            secureTextEntry
+                            placeholder="Enter your password"
+                            style={styles.input}
                         />
                         <TouchableOpacity
                             style={styles.forgotPasswordContainer}

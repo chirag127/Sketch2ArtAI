@@ -12,6 +12,7 @@ import {
     ScrollView,
     Dimensions,
 } from "react-native";
+import PasswordInput from "../components/PasswordInput";
 import { showAlert, showConfirmDialog } from "../utils/dialog";
 import AuthContext from "../context/AuthContext";
 
@@ -304,23 +305,21 @@ export default function ResetPasswordScreen({ navigation, route }) {
 
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>New Password</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Enter new password"
+                        <PasswordInput
                             value={newPassword}
                             onChangeText={setNewPassword}
-                            secureTextEntry
+                            placeholder="Enter new password"
+                            style={styles.input}
                         />
                     </View>
 
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Confirm Password</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Confirm new password"
+                        <PasswordInput
                             value={confirmPassword}
                             onChangeText={setConfirmPassword}
-                            secureTextEntry
+                            placeholder="Confirm new password"
+                            style={styles.input}
                         />
                     </View>
 
