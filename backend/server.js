@@ -110,7 +110,10 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
         let fileBase64;
         let mimeType;
 
-        if (!req.file && !req.body.base64Data) {
+        // Check if this is a custom prompt only request
+        const isCustomPromptOnly = req.body.customPromptOnly === 'true';
+
+        if (!isCustomPromptOnly && !req.file && !req.body.base64Data) {
             console.error("Error: No file or base64 data provided");
             return res.status(400).json({
                 error: "No file or base64 data uploaded",
@@ -123,7 +126,14 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
         const style = req.body.style || "Anime"; // Default style is Anime
         const customPrompt = req.body.customPrompt || ""; // Get custom prompt if provided
 
-        if (req.file) {
+        // Handle custom prompt only requests
+        if (isCustomPromptOnly) {
+            console.log("Processing custom prompt only request");
+            // No image data needed for custom prompt only
+            fileBase64 = null;
+            mimeType = null;
+            console.log("Custom prompt only request - skipping image processing");
+        } else if (req.file) {
             // Handle file upload (from native platforms)
             const filePath = req.file.path;
             mimeType = req.file.mimetype;
@@ -187,25 +197,39 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
         console.log("Generation config:", generationConfig);
 
         // Start chat session
-        const chatSession = model.startChat({
-            generationConfig,
-            history: [
-                {
-                    role: "user",
-                    parts: [
-                        {
-                            inlineData: {
-                                mimeType: mimeType,
-                                data: fileBase64,
-                            },
-                        },
-                    ],
-                },
-            ],
-        });
+        let chatSession;
+        let promptMessage;
 
-        // Send message to convert sketch
-        let promptMessage = `Convert this sketch into ${style} style art`;
+        if (isCustomPromptOnly) {
+            // For custom prompt only, don't include image data
+            chatSession = model.startChat({
+                generationConfig,
+            });
+
+            // For custom prompt only, use a different base prompt
+            promptMessage = `Generate an image in ${style} style`;
+        } else {
+            // For image-based requests, include the image in history
+            chatSession = model.startChat({
+                generationConfig,
+                history: [
+                    {
+                        role: "user",
+                        parts: [
+                            {
+                                inlineData: {
+                                    mimeType: mimeType,
+                                    data: fileBase64,
+                                },
+                            },
+                        ],
+                    },
+                ],
+            });
+
+            // For image-based requests, use the sketch conversion prompt
+            promptMessage = `Convert this sketch into ${style} style art`;
+        }
 
         // Add custom prompt if provided
         if (customPrompt) {
@@ -351,9 +375,14 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
         let convertedImageUrl = "";
 
         try {
-            // Upload original sketch
-            console.log("Uploading original sketch to image host...");
-            originalImageUrl = await uploadToFreeImageHost(fileBase64);
+            // Upload original sketch if we have one (not for custom prompt only)
+            if (!isCustomPromptOnly && fileBase64) {
+                console.log("Uploading original sketch to image host...");
+                originalImageUrl = await uploadToFreeImageHost(fileBase64);
+            } else {
+                // For custom prompt only, no original image
+                originalImageUrl = "";
+            }
 
             // Only upload converted art if we have an image
             if (hasImage && imageData) {

@@ -419,6 +419,115 @@ export default function HomeScreen({ navigation, route }) {
         }
     };
 
+    // Function to generate image with custom prompt only (no sketch)
+    const generateWithPromptOnly = async () => {
+        if (!customPrompt.trim()) {
+            if (Platform.OS === "web") {
+                showAlert(
+                    "No prompt",
+                    "Please enter a custom prompt first"
+                );
+            } else {
+                Alert.alert(
+                    "No prompt",
+                    "Please enter a custom prompt first"
+                );
+            }
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            // Create form data
+            const formData = new FormData();
+
+            // Add style
+            formData.append("style", style);
+
+            // Add custom prompt
+            formData.append("customPrompt", customPrompt.trim());
+
+            // Add flag to indicate this is a custom prompt only request
+            formData.append("customPromptOnly", "true");
+
+            console.log("Sending custom prompt only request to:", API_URL + "/convert");
+            console.log("FormData keys:", [...formData.keys()]);
+
+            // Send to backend
+            const response = await axios.post(API_URL + "/convert", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                    Authorization: `Bearer ${userToken}`,
+                },
+            });
+
+            if (response.data && response.data.success) {
+                // Check if we have image data
+                if (response.data.imageData) {
+                    setConvertedArt(response.data.imageData);
+
+                    // Store the image URLs if available
+                    if (response.data.convertedImageUrl) {
+                        console.log(
+                            "Converted image URL:",
+                            response.data.convertedImageUrl
+                        );
+                        setConvertedImageUrl(response.data.convertedImageUrl);
+                    }
+                } else {
+                    // Text-only response
+                    setConvertedArt(null);
+                    setConvertedImageUrl("");
+                }
+
+                // Set the response text if available
+                if (response.data.responseText) {
+                    setResponseText(response.data.responseText);
+                } else {
+                    setResponseText("");
+                }
+
+                // Clear original image since this was a prompt-only request
+                setOriginalImageUrl("");
+                setSketch(null);
+            } else {
+                Alert.alert("Error", "Failed to generate image");
+                setResponseText("");
+                setConvertedArt(null);
+            }
+        } catch (error) {
+            console.error("Error generating with prompt only:", error);
+            // More detailed error logging
+            if (error.response) {
+                console.error("Error response data:", error.response.data);
+                console.error(
+                    "Error response status:",
+                    error.response.status
+                );
+
+                Alert.alert(
+                    "Error",
+                    `Failed to generate image: ${error.response.status} - ${JSON.stringify(error.response.data)}`
+                );
+            } else if (error.request) {
+                console.error("Error request:", error.request);
+                Alert.alert(
+                    "Error",
+                    "No response from server. Please check your connection."
+                );
+            } else {
+                console.error("Error message:", error.message);
+                Alert.alert(
+                    "Error",
+                    `Failed to generate image: ${error.message}`
+                );
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Main convert function that decides whether to convert to one style or all styles
     const convertSketch = async () => {
         if (!sketch) {
@@ -757,38 +866,61 @@ export default function HomeScreen({ navigation, route }) {
                 </ScrollView>
 
                 <Text style={styles.sectionTitle}>
-                    Custom Prompt (Optional)
+                    Custom Prompt
                 </Text>
                 <View style={styles.customPromptContainer}>
                     <TextInput
                         style={styles.customPromptInput}
-                        placeholder="Enter custom instructions (separate multiple prompts with commas or line breaks)"
+                        placeholder="Enter custom instructions (can be used with or without an image)"
                         placeholderTextColor="#999"
                         value={customPrompt}
                         onChangeText={setCustomPrompt}
                         multiline
                         numberOfLines={3}
                     />
+                    <Text style={styles.promptHelpText}>
+                        Separate multiple prompts with commas or line breaks. You can generate images with just a prompt, no sketch needed.
+                    </Text>
                 </View>
 
-                <TouchableOpacity
-                    style={[
-                        styles.convertButton,
-                        !sketch && styles.disabledButton,
-                    ]}
-                    onPress={convertSketch}
-                    disabled={!sketch || loading}
-                >
-                    {loading ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <Text style={styles.convertButtonText}>
-                            {customPrompt.trim()
-                                ? "Convert with Custom Prompt"
-                                : `Convert to ${style}`}
-                        </Text>
-                    )}
-                </TouchableOpacity>
+                <View style={styles.promptButtonsContainer}>
+                    <TouchableOpacity
+                        style={[
+                            styles.convertButton,
+                            !sketch && styles.disabledButton,
+                        ]}
+                        onPress={convertSketch}
+                        disabled={!sketch || loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.convertButtonText}>
+                                {customPrompt.trim()
+                                    ? "Convert with Custom Prompt"
+                                    : `Convert to ${style}`}
+                            </Text>
+                        )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[
+                            styles.promptOnlyButton,
+                            !customPrompt.trim() && styles.disabledButton,
+                            loading && styles.disabledButton,
+                        ]}
+                        onPress={generateWithPromptOnly}
+                        disabled={!customPrompt.trim() || loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.promptOnlyButtonText}>
+                                Generate with Prompt Only
+                            </Text>
+                        )}
+                    </TouchableOpacity>
+                </View>
 
                 {/* Display converted art if available */}
                 {convertedArt && (
@@ -1003,18 +1135,42 @@ const styles = StyleSheet.create({
         textAlignVertical: "top",
         minHeight: 80,
     },
+    promptHelpText: {
+        fontSize: 12,
+        color: "#666",
+        marginTop: 5,
+        marginBottom: 10,
+        fontStyle: "italic",
+    },
+    promptButtonsContainer: {
+        marginBottom: 30,
+        width: "100%",
+    },
     convertButton: {
         backgroundColor: "#5cb85c",
         paddingVertical: 15,
         borderRadius: 30,
         alignItems: "center",
-        marginBottom: 30,
+        marginBottom: 15,
+        elevation: 3,
+    },
+    promptOnlyButton: {
+        backgroundColor: "#9c27b0", // Purple color for prompt-only button
+        paddingVertical: 15,
+        borderRadius: 30,
+        alignItems: "center",
+        marginBottom: 15,
         elevation: 3,
     },
     disabledButton: {
         backgroundColor: "#cccccc",
     },
     convertButtonText: {
+        color: "white",
+        fontSize: 18,
+        fontWeight: "bold",
+    },
+    promptOnlyButtonText: {
         color: "white",
         fontSize: 18,
         fontWeight: "bold",
