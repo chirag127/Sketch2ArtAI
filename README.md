@@ -51,6 +51,11 @@ Edge function Logs: https://app.netlify.com/sites/sketch2artai/logs/edge-functio
 Unique deploy URL:  https://67d96dd94ce0b4890eeca2c6--sketch2artai.netlify.app
 Website URL:        https://sketch2artai.netlify.app
 
+
+##
+
+- the user prefers that you do not wait for the user to confirm the detailed plan and you should think deeply about the plan and then proceed.
+
 ## Features
 
 -   Take photos or select sketches from your gallery
