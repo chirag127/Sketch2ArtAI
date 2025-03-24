@@ -1191,6 +1191,12 @@ export default function HomeScreen({ navigation, route }) {
                         >
                             <Text style={styles.shareButtonText}>Share</Text>
                         </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.downloadButton}
+                            onPress={() => downloadImage(convertedImageUrl, `sketch2art_${Date.now()}.png`)}
+                        >
+                            <Text style={styles.downloadButtonText}>Download</Text>
+                        </TouchableOpacity>
                     </>
                 )}
 
@@ -1440,6 +1446,19 @@ const styles = StyleSheet.create({
         color: "white",
         fontSize: 16,
         fontWeight: "600",
+    },
+    downloadButton: {
+        backgroundColor: '#2196F3',
+        paddingVertical: 12,
+        borderRadius: 25,
+        alignItems: 'center',
+        marginTop: 10,
+        elevation: 3,
+    },
+    downloadButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '600',
     },
     cleanupButton: {
         backgroundColor: "#d9534f",

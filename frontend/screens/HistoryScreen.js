@@ -32,18 +32,41 @@ export default function HistoryScreen({ navigation }) {
     const [isConverting, setIsConverting] = useState(false);
     const [imageToConvert, setImageToConvert] = useState(null); // URL of the image to convert
     const [imageType, setImageType] = useState(null); // 'original' or 'converted'
+    const [currentPage, setCurrentPage] = useState(1);
+    const [hasMoreItems, setHasMoreItems] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
 
-    const fetchHistory = async () => {
+    const fetchHistory = async (page = 1, append = false) => {
         try {
-            setLoading(true);
-            // console.log("Fetching history from:", `${API_URL}/history`);
+            if (page === 1) {
+                setLoading(true);
+            } else if (append) {
+                setLoadingMore(true);
+            }
+
+            console.log(`Fetching history page ${page} from: ${API_URL}/history`);
             const response = await axios.get(`${API_URL}/history`, {
                 headers: {
                     Authorization: `Bearer ${userToken}`,
                 },
+                params: {
+                    page,
+                    limit: 10
+                }
             });
-            // console.log("History data received:", response.data);
-            setHistory(response.data);
+
+            console.log("History data received:", response.data);
+
+            // Update state based on whether we're appending or replacing
+            if (append) {
+                setHistory(prevHistory => [...prevHistory, ...response.data.history]);
+            } else {
+                setHistory(response.data.history);
+            }
+
+            // Update pagination state
+            setCurrentPage(page);
+            setHasMoreItems(response.data.pagination.hasMore);
         } catch (error) {
             console.error("Error fetching history:", error);
             if (Platform.OS === "web") {
@@ -60,6 +83,7 @@ export default function HistoryScreen({ navigation }) {
         } finally {
             setLoading(false);
             setRefreshing(false);
+            setLoadingMore(false);
         }
     };
 
@@ -82,7 +106,16 @@ export default function HistoryScreen({ navigation }) {
 
     const handleRefresh = () => {
         setRefreshing(true);
-        fetchHistory();
+        setCurrentPage(1);
+        fetchHistory(1, false);
+    };
+
+    // Function to load more history items
+    const loadMoreHistory = () => {
+        if (hasMoreItems && !loadingMore) {
+            const nextPage = currentPage + 1;
+            fetchHistory(nextPage, true);
+        }
     };
 
     const deleteHistoryItem = async (id) => {
@@ -764,7 +797,7 @@ export default function HistoryScreen({ navigation }) {
                 )}
             </View>
 
-            {history.length === 0 ? (
+            {history.length === 0 && !loading ? (
                 <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>No history found</Text>
                     <TouchableOpacity
@@ -775,14 +808,34 @@ export default function HistoryScreen({ navigation }) {
                     </TouchableOpacity>
                 </View>
             ) : (
-                <FlatList
-                    data={history}
-                    renderItem={renderHistoryItem}
-                    keyExtractor={(item) => item._id}
-                    contentContainerStyle={styles.listContainer}
-                    refreshing={refreshing}
-                    onRefresh={handleRefresh}
-                />
+                <>
+                    <FlatList
+                        data={history}
+                        renderItem={renderHistoryItem}
+                        keyExtractor={(item) => item._id}
+                        contentContainerStyle={styles.listContainer}
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        onEndReached={loadMoreHistory}
+                        onEndReachedThreshold={0.5}
+                        ListFooterComponent={() => (
+                            hasMoreItems ? (
+                                <View style={styles.loadMoreContainer}>
+                                    {loadingMore ? (
+                                        <ActivityIndicator size="small" color="#4a90e2" />
+                                    ) : (
+                                        <TouchableOpacity
+                                            style={styles.loadMoreButton}
+                                            onPress={loadMoreHistory}
+                                        >
+                                            <Text style={styles.loadMoreButtonText}>Load More</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            ) : null
+                        )}
+                    />
+                </>
             )}
 
             {/* Conversion Modal */}
@@ -1047,5 +1100,20 @@ const styles = StyleSheet.create({
     loadingText: {
         marginTop: 5,
         fontSize: 12,
+    },
+    loadMoreContainer: {
+        paddingVertical: 20,
+        alignItems: 'center',
+    },
+    loadMoreButton: {
+        backgroundColor: '#4a90e2',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 25,
+    },
+    loadMoreButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '600',
     },
 });

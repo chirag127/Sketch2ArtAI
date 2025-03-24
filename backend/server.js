@@ -528,13 +528,31 @@ app.post("/api/cleanup", cors(), async (req, res) => {
     }
 });
 
-// API endpoint to get image history
+// API endpoint to get image history with pagination
 app.get("/api/history", auth, async (req, res) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Get total count for pagination info
+        const totalCount = await ImageHistory.countDocuments({ user: req.user._id });
+
         const history = await ImageHistory.find({ user: req.user._id })
             .sort({ createdAt: -1 })
-            .limit(20);
-        res.json(history);
+            .skip(skip)
+            .limit(limit);
+
+        res.json({
+            history,
+            pagination: {
+                total: totalCount,
+                page,
+                limit,
+                pages: Math.ceil(totalCount / limit),
+                hasMore: skip + history.length < totalCount
+            }
+        });
     } catch (error) {
         console.error("Error fetching history:", error);
         res.status(500).json({
