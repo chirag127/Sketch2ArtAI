@@ -43,7 +43,8 @@ const convertSketch = async (req, res) => {
 
         // Get style and custom prompt
         let style = req.body.style || "Anime"; // Default style is Anime
-        const customPrompt = req.body.customPrompt || ""; // Get custom prompt if provided
+        const customPrompt =
+            req.body.customPrompt || "Create a detailed and creative image"; // Custom prompt is now required
 
         // If style is "Custom Prompt Only", use a generic style for the AI
         if (style === "Custom Prompt Only") {
@@ -129,8 +130,8 @@ const convertSketch = async (req, res) => {
             req.body.style === "Custom Prompt Only"
         ) {
             promptMessage = `Generate an image with the following prompt: ${customPrompt}`;
-        } else if (customPrompt) {
-            // Add custom prompt if provided
+        } else {
+            // Always add custom prompt - now required for all conversions
             promptMessage = `${promptMessage}- Additional prompt: ${customPrompt}`;
         }
 

@@ -111,7 +111,9 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
         let mimeType;
 
         // Check if this is a custom prompt only request or if the style is "Custom Prompt Only"
-        const isCustomPromptOnly = req.body.customPromptOnly === 'true' || req.body.style === 'Custom Prompt Only';
+        const isCustomPromptOnly =
+            req.body.customPromptOnly === "true" ||
+            req.body.style === "Custom Prompt Only";
 
         if (!isCustomPromptOnly && !req.file && !req.body.base64Data) {
             console.error("Error: No file or base64 data provided");
@@ -124,7 +126,8 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
 
         // Get style and custom prompt
         let style = req.body.style || "Anime"; // Default style is Anime
-        const customPrompt = req.body.customPrompt || ""; // Get custom prompt if provided
+        const customPrompt =
+            req.body.customPrompt || "Create a detailed and creative image"; // Custom prompt is now required
 
         // If style is "Custom Prompt Only", use a generic style for the AI
         if (style === "Custom Prompt Only") {
@@ -137,7 +140,9 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
             // No image data needed for custom prompt only
             fileBase64 = null;
             mimeType = null;
-            console.log("Custom prompt only request - skipping image processing");
+            console.log(
+                "Custom prompt only request - skipping image processing"
+            );
         } else if (req.file) {
             // Handle file upload (from native platforms)
             const filePath = req.file.path;
@@ -237,10 +242,13 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
         }
 
         // For Custom Prompt Only style, use the custom prompt directly
-        if (style === "Custom Prompt Only" || req.body.style === "Custom Prompt Only") {
+        if (
+            style === "Custom Prompt Only" ||
+            req.body.style === "Custom Prompt Only"
+        ) {
             promptMessage = `Generate an image with the following prompt: ${customPrompt}`;
-        } else if (customPrompt) {
-            // Add custom prompt if provided
+        } else {
+            // Always add custom prompt - now required for all conversions
             promptMessage = `${promptMessage}- Additional prompt: ${customPrompt}`;
         }
 
@@ -389,11 +397,15 @@ app.post("/api/convert", auth, upload.single("sketch"), async (req, res) => {
                 originalImageUrl = await uploadToFreeImageHost(fileBase64);
             } else if (isCustomPromptOnly) {
                 // For custom prompt only, no original image
-                console.log("Custom prompt only request - skipping original image upload");
+                console.log(
+                    "Custom prompt only request - skipping original image upload"
+                );
                 originalImageUrl = "";
             } else {
                 console.error("Error: No file data to upload");
-                return res.status(400).json({ error: "No file data to upload" });
+                return res
+                    .status(400)
+                    .json({ error: "No file data to upload" });
             }
 
             // Only upload converted art if we have an image
@@ -536,7 +548,9 @@ app.get("/api/history", auth, async (req, res) => {
         const skip = (page - 1) * limit;
 
         // Get total count for pagination info
-        const totalCount = await ImageHistory.countDocuments({ user: req.user._id });
+        const totalCount = await ImageHistory.countDocuments({
+            user: req.user._id,
+        });
 
         const history = await ImageHistory.find({ user: req.user._id })
             .sort({ createdAt: -1 })
@@ -550,8 +564,8 @@ app.get("/api/history", auth, async (req, res) => {
                 page,
                 limit,
                 pages: Math.ceil(totalCount / limit),
-                hasMore: skip + history.length < totalCount
-            }
+                hasMore: skip + history.length < totalCount,
+            },
         });
     } catch (error) {
         console.error("Error fetching history:", error);

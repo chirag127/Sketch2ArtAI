@@ -9,6 +9,7 @@ import {
     TextInput,
     ActivityIndicator,
     Platform,
+    Alert,
 } from "react-native";
 
 const ConversionModal = ({
@@ -19,7 +20,9 @@ const ConversionModal = ({
     imageType,
 }) => {
     const [selectedStyle, setSelectedStyle] = useState("Anime");
-    const [customPrompt, setCustomPrompt] = useState("");
+    const [customPrompt, setCustomPrompt] = useState(
+        "Create a detailed and creative image"
+    );
 
     const styleOptions = [
         "Custom Prompt Only", // Added option for custom prompt without style
@@ -50,11 +53,11 @@ const ConversionModal = ({
     ];
 
     const handleConvert = () => {
-        // Check if "Custom Prompt Only" is selected but no prompt is provided
-        if (selectedStyle === "Custom Prompt Only" && !customPrompt.trim()) {
+        // Check if no prompt is provided - now required for all styles
+        if (!customPrompt.trim()) {
             Alert.alert(
-                "Custom Prompt Required",
-                "Please enter a custom prompt when 'Custom Prompt Only' style is selected"
+                "Prompt Required",
+                "Please enter a prompt to describe what you want to create"
             );
             return;
         }
@@ -71,7 +74,9 @@ const ConversionModal = ({
             <View style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
                     <Text style={styles.modalTitle}>
-                        Convert {imageType === "original" ? "Original" : "Converted"} Image
+                        Convert{" "}
+                        {imageType === "original" ? "Original" : "Converted"}{" "}
+                        Image
                     </Text>
 
                     <Text style={styles.sectionTitle}>Select Art Style</Text>
@@ -84,7 +89,8 @@ const ConversionModal = ({
                                 key={option}
                                 style={[
                                     styles.styleButton,
-                                    selectedStyle === option && styles.selectedStyleButton,
+                                    selectedStyle === option &&
+                                        styles.selectedStyleButton,
                                 ]}
                                 onPress={() => setSelectedStyle(option)}
                             >
@@ -101,10 +107,10 @@ const ConversionModal = ({
                         ))}
                     </ScrollView>
 
-                    <Text style={styles.sectionTitle}>Custom Prompt (Optional)</Text>
+                    <Text style={styles.sectionTitle}>Prompt (Required)</Text>
                     <TextInput
                         style={styles.customPromptInput}
-                        placeholder="Enter custom instructions (separate multiple prompts with commas or line breaks)"
+                        placeholder="Describe what you want to create (required)"
                         placeholderTextColor="#999"
                         value={customPrompt}
                         onChangeText={setCustomPrompt}
@@ -122,7 +128,10 @@ const ConversionModal = ({
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={[styles.convertButton, isConverting && styles.disabledButton]}
+                            style={[
+                                styles.convertButton,
+                                isConverting && styles.disabledButton,
+                            ]}
                             onPress={handleConvert}
                             disabled={isConverting}
                         >
@@ -131,9 +140,7 @@ const ConversionModal = ({
                             ) : (
                                 <Text style={styles.convertButtonText}>
                                     {selectedStyle === "Custom Prompt Only"
-                                        ? "Generate with Custom Prompt"
-                                        : customPrompt.trim()
-                                        ? "Convert with Custom Prompt"
+                                        ? "Generate with Prompt"
                                         : `Convert to ${selectedStyle}`}
                                 </Text>
                             )}

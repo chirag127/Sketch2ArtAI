@@ -33,7 +33,9 @@ export default function HomeScreen({ navigation, route }) {
     const [convertedArt, setConvertedArt] = useState(null);
     const [loading, setLoading] = useState(false);
     const [style, setStyle] = useState("Anime");
-    const [customPrompt, setCustomPrompt] = useState("");
+    const [customPrompt, setCustomPrompt] = useState(
+        "Create a detailed and creative image"
+    );
     const [responseText, setResponseText] = useState("");
     const [convertedImageUrl, setConvertedImageUrl] = useState("");
     const [originalImageUrl, setOriginalImageUrl] = useState("");
@@ -185,14 +187,15 @@ export default function HomeScreen({ navigation, route }) {
                 formData.append("style", currentStyle);
             }
 
-            // Add custom prompt if provided
+            // Add custom prompt - now required for all conversions
             // If a specific prompt is passed, use that instead of the global customPrompt
-            const promptToUse = specificPrompt !== null ? specificPrompt : customPrompt;
+            const promptToUse =
+                specificPrompt !== null ? specificPrompt : customPrompt;
             if (promptToUse.trim()) {
                 formData.append("customPrompt", promptToUse.trim());
-            } else if (currentStyle === "Custom Prompt Only") {
-                // If "Custom Prompt Only" is selected but no prompt is provided, throw an error
-                throw new Error("Custom prompt is required when 'Custom Prompt Only' style is selected");
+            } else {
+                // Prompt is now required for all styles
+                throw new Error("A prompt is required for all conversions");
             }
 
             if (!isPartOfBatch) {
@@ -252,11 +255,14 @@ export default function HomeScreen({ navigation, route }) {
         const lineSegments = prompt.split(/\r?\n/);
 
         // Then split each line by commas and flatten the array
-        const allSegments = lineSegments.flatMap(line => {
+        const allSegments = lineSegments.flatMap((line) => {
             // Skip empty lines
             if (!line.trim()) return [];
             // Split by comma and trim each segment
-            return line.split(',').map(segment => segment.trim()).filter(segment => segment);
+            return line
+                .split(",")
+                .map((segment) => segment.trim())
+                .filter((segment) => segment);
         });
 
         return allSegments;
@@ -291,9 +297,15 @@ export default function HomeScreen({ navigation, route }) {
             let successCount = 0;
             for (const prompt of prompts) {
                 console.log(
-                    `Converting with prompt: "${prompt}" (${successCount + 1}/${prompts.length})`
+                    `Converting with prompt: "${prompt}" (${successCount + 1}/${
+                        prompts.length
+                    })`
                 );
-                const result = await convertSketchToStyle(currentStyle, true, prompt);
+                const result = await convertSketchToStyle(
+                    currentStyle,
+                    true,
+                    prompt
+                );
                 if (result && result.success) {
                     successCount++;
                 }
@@ -382,17 +394,28 @@ export default function HomeScreen({ navigation, route }) {
                 if (hasMultiplePrompts) {
                     // Process each prompt for this style
                     for (const prompt of prompts) {
-                        console.log(`Processing prompt: "${prompt}" for style: ${currentStyle}`);
-                        const result = await convertSketchToStyle(currentStyle, true, prompt);
+                        console.log(
+                            `Processing prompt: "${prompt}" for style: ${currentStyle}`
+                        );
+                        const result = await convertSketchToStyle(
+                            currentStyle,
+                            true,
+                            prompt
+                        );
                         if (result && result.success) {
                             successCount++;
                         }
                         // Small delay to avoid overwhelming the server
-                        await new Promise((resolve) => setTimeout(resolve, 1000));
+                        await new Promise((resolve) =>
+                            setTimeout(resolve, 1000)
+                        );
                     }
                 } else {
                     // Regular conversion with the global custom prompt
-                    const result = await convertSketchToStyle(currentStyle, true);
+                    const result = await convertSketchToStyle(
+                        currentStyle,
+                        true
+                    );
                     if (result && result.success) {
                         successCount++;
                     }
@@ -429,15 +452,9 @@ export default function HomeScreen({ navigation, route }) {
     const generateWithPromptOnly = async () => {
         if (!customPrompt.trim()) {
             if (Platform.OS === "web") {
-                showAlert(
-                    "No prompt",
-                    "Please enter a custom prompt first"
-                );
+                showAlert("No prompt", "Please enter a custom prompt first");
             } else {
-                Alert.alert(
-                    "No prompt",
-                    "Please enter a custom prompt first"
-                );
+                Alert.alert("No prompt", "Please enter a custom prompt first");
             }
             return;
         }
@@ -473,7 +490,10 @@ export default function HomeScreen({ navigation, route }) {
             // Add flag to indicate this is a custom prompt only request
             formData.append("customPromptOnly", "true");
 
-            console.log("Sending custom prompt only request to:", API_URL + "/convert");
+            console.log(
+                "Sending custom prompt only request to:",
+                API_URL + "/convert"
+            );
             console.log("FormData keys:", [...formData.keys()]);
 
             // Send to backend
@@ -523,14 +543,13 @@ export default function HomeScreen({ navigation, route }) {
             // More detailed error logging
             if (error.response) {
                 console.error("Error response data:", error.response.data);
-                console.error(
-                    "Error response status:",
-                    error.response.status
-                );
+                console.error("Error response status:", error.response.status);
 
                 Alert.alert(
                     "Error",
-                    `Failed to generate image: ${error.response.status} - ${JSON.stringify(error.response.data)}`
+                    `Failed to generate image: ${
+                        error.response.status
+                    } - ${JSON.stringify(error.response.data)}`
                 );
             } else if (error.request) {
                 console.error("Error request:", error.request);
@@ -572,7 +591,9 @@ export default function HomeScreen({ navigation, route }) {
             let successCount = 0;
             for (const prompt of prompts) {
                 console.log(
-                    `Generating with prompt: "${prompt}" (${successCount + 1}/${prompts.length})`
+                    `Generating with prompt: "${prompt}" (${successCount + 1}/${
+                        prompts.length
+                    })`
                 );
 
                 // Create form data
@@ -588,12 +609,16 @@ export default function HomeScreen({ navigation, route }) {
                 formData.append("customPromptOnly", "true");
 
                 // Send to backend
-                const response = await axios.post(API_URL + "/convert", formData, {
-                    headers: {
-                        "Content-Type": "multipart/form-data",
-                        Authorization: `Bearer ${userToken}`,
-                    },
-                });
+                const response = await axios.post(
+                    API_URL + "/convert",
+                    formData,
+                    {
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                            Authorization: `Bearer ${userToken}`,
+                        },
+                    }
+                );
 
                 if (response.data && response.data.success) {
                     successCount++;
@@ -606,7 +631,9 @@ export default function HomeScreen({ navigation, route }) {
 
                             // Store the image URLs if available
                             if (response.data.convertedImageUrl) {
-                                setConvertedImageUrl(response.data.convertedImageUrl);
+                                setConvertedImageUrl(
+                                    response.data.convertedImageUrl
+                                );
                             }
                         }
 
@@ -637,7 +664,6 @@ export default function HomeScreen({ navigation, route }) {
             // Clear original image since this was a prompt-only request
             setOriginalImageUrl("");
             setSketch(null);
-
         } catch (error) {
             console.error("Error generating with multiple prompts:", error);
             if (Platform.OS === "web") {
@@ -683,7 +709,9 @@ export default function HomeScreen({ navigation, route }) {
             for (const currentStyle of stylesToConvert) {
                 for (const prompt of prompts) {
                     console.log(
-                        `Generating with style: ${currentStyle}, prompt: "${prompt}" (${successCount + 1}/${totalCount})`
+                        `Generating with style: ${currentStyle}, prompt: "${prompt}" (${
+                            successCount + 1
+                        }/${totalCount})`
                     );
 
                     // Create form data
@@ -699,12 +727,16 @@ export default function HomeScreen({ navigation, route }) {
                     formData.append("customPromptOnly", "true");
 
                     // Send to backend
-                    const response = await axios.post(API_URL + "/convert", formData, {
-                        headers: {
-                            "Content-Type": "multipart/form-data",
-                            Authorization: `Bearer ${userToken}`,
-                        },
-                    });
+                    const response = await axios.post(
+                        API_URL + "/convert",
+                        formData,
+                        {
+                            headers: {
+                                "Content-Type": "multipart/form-data",
+                                Authorization: `Bearer ${userToken}`,
+                            },
+                        }
+                    );
 
                     if (response.data && response.data.success) {
                         successCount++;
@@ -717,7 +749,9 @@ export default function HomeScreen({ navigation, route }) {
 
                                 // Store the image URLs if available
                                 if (response.data.convertedImageUrl) {
-                                    setConvertedImageUrl(response.data.convertedImageUrl);
+                                    setConvertedImageUrl(
+                                        response.data.convertedImageUrl
+                                    );
                                 }
                             }
 
@@ -749,13 +783,15 @@ export default function HomeScreen({ navigation, route }) {
             // Clear original image since this was a prompt-only request
             setOriginalImageUrl("");
             setSketch(null);
-
         } catch (error) {
             console.error("Error generating with all styles:", error);
             if (Platform.OS === "web") {
                 showAlert("Error", "Failed to process all styles and prompts");
             } else {
-                Alert.alert("Error", "Failed to process all styles and prompts");
+                Alert.alert(
+                    "Error",
+                    "Failed to process all styles and prompts"
+                );
             }
         } finally {
             setLoading(false);
@@ -785,17 +821,17 @@ export default function HomeScreen({ navigation, route }) {
             return;
         }
 
-        // Check if "Custom Prompt Only" is selected but no prompt is provided
-        if (style === "Custom Prompt Only" && !customPrompt.trim()) {
+        // Check if no prompt is provided - now required for all styles
+        if (!customPrompt.trim()) {
             if (Platform.OS === "web") {
                 showAlert(
-                    "Custom Prompt Required",
-                    "Please enter a custom prompt when 'Custom Prompt Only' style is selected"
+                    "Prompt Required",
+                    "Please enter a prompt to describe what you want to create"
                 );
             } else {
                 Alert.alert(
-                    "Custom Prompt Required",
-                    "Please enter a custom prompt when 'Custom Prompt Only' style is selected"
+                    "Prompt Required",
+                    "Please enter a prompt to describe what you want to create"
                 );
             }
             return;
@@ -1116,13 +1152,11 @@ export default function HomeScreen({ navigation, route }) {
                     ))}
                 </ScrollView>
 
-                <Text style={styles.sectionTitle}>
-                    Custom Prompt
-                </Text>
+                <Text style={styles.sectionTitle}>Prompt (Required)</Text>
                 <View style={styles.customPromptContainer}>
                     <TextInput
                         style={styles.customPromptInput}
-                        placeholder="Enter custom instructions (can be used with or without an image)"
+                        placeholder="Describe what you want to create (required)"
                         placeholderTextColor="#999"
                         value={customPrompt}
                         onChangeText={setCustomPrompt}
@@ -1130,7 +1164,9 @@ export default function HomeScreen({ navigation, route }) {
                         numberOfLines={3}
                     />
                     <Text style={styles.promptHelpText}>
-                        Separate multiple prompts with commas or line breaks. You can generate images with just a prompt, no sketch needed.
+                        A prompt is required for all generations. Separate
+                        multiple prompts with commas or line breaks. You can
+                        generate images with just a prompt, no sketch needed.
                     </Text>
                 </View>
 
@@ -1148,9 +1184,7 @@ export default function HomeScreen({ navigation, route }) {
                         ) : (
                             <Text style={styles.convertButtonText}>
                                 {style === "Custom Prompt Only"
-                                    ? "Generate with Custom Prompt"
-                                    : customPrompt.trim()
-                                    ? "Convert with Custom Prompt"
+                                    ? "Generate with Prompt"
                                     : `Convert to ${style}`}
                             </Text>
                         )}
@@ -1169,7 +1203,7 @@ export default function HomeScreen({ navigation, route }) {
                             <ActivityIndicator color="#fff" />
                         ) : (
                             <Text style={styles.promptOnlyButtonText}>
-                                Generate with Prompt Only
+                                Generate Image (No Sketch)
                             </Text>
                         )}
                     </TouchableOpacity>
@@ -1193,9 +1227,16 @@ export default function HomeScreen({ navigation, route }) {
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.downloadButton}
-                            onPress={() => downloadImage(convertedImageUrl, `sketch2art_${Date.now()}.png`)}
+                            onPress={() =>
+                                downloadImage(
+                                    convertedImageUrl,
+                                    `sketch2art_${Date.now()}.png`
+                                )
+                            }
                         >
-                            <Text style={styles.downloadButtonText}>Download</Text>
+                            <Text style={styles.downloadButtonText}>
+                                Download
+                            </Text>
                         </TouchableOpacity>
                     </>
                 )}
@@ -1448,17 +1489,17 @@ const styles = StyleSheet.create({
         fontWeight: "600",
     },
     downloadButton: {
-        backgroundColor: '#2196F3',
+        backgroundColor: "#2196F3",
         paddingVertical: 12,
         borderRadius: 25,
-        alignItems: 'center',
+        alignItems: "center",
         marginTop: 10,
         elevation: 3,
     },
     downloadButtonText: {
-        color: 'white',
+        color: "white",
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: "600",
     },
     cleanupButton: {
         backgroundColor: "#d9534f",
