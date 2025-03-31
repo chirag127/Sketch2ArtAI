@@ -9,6 +9,6 @@ const dev = {
 const prod = {
     apiUrl: "https://sketch2artai.onrender.com/api" // Example configuration
 };
-const config = process.env.NODE_ENV === "production" ? prod : dev;
+const config = process.env.NODE_ENV === "development" ? dev : prod; // Determine the environment
 export const API_URL = config.apiUrl; // Use the appropriate API URL based on the environment
 export const APP_NAME = "Sketch2ArtAI"; // Example app name, can be used in the app header or title
