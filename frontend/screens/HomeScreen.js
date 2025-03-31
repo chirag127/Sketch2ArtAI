@@ -25,6 +25,7 @@ import {
 } from "../utils/platformUtils";
 import axios from "axios";
 import { API_URL } from "../env";
+import CreditBalance from "../components/CreditBalance";
 
 export default function HomeScreen({ navigation, route }) {
     const { userToken } = useContext(AuthContext);
@@ -39,6 +40,7 @@ export default function HomeScreen({ navigation, route }) {
     const [responseText, setResponseText] = useState("");
     const [convertedImageUrl, setConvertedImageUrl] = useState("");
     const [originalImageUrl, setOriginalImageUrl] = useState("");
+    const [credits, setCredits] = useState(0);
 
     // Handle sketch from Canvas screen
     useEffect(() => {
@@ -49,6 +51,29 @@ export default function HomeScreen({ navigation, route }) {
             navigation.setParams({ sketchUri: undefined });
         }
     }, [route.params?.sketchUri]);
+
+    useEffect(() => {
+        fetchCredits();
+        // ...existing useEffect code...
+    }, []);
+
+    const fetchCredits = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/credits/balance`);
+            setCredits(response.data.balance);
+        } catch (error) {
+            console.error("Error fetching credits:", error);
+        }
+    };
+
+    // Add credit refresh when screen comes into focus
+    useEffect(() => {
+        const unsubscribe = navigation.addListener("focus", () => {
+            fetchCredits();
+        });
+
+        return unsubscribe;
+    }, [navigation]);
 
     const pickImage = async () => {
         try {
@@ -1092,6 +1117,7 @@ export default function HomeScreen({ navigation, route }) {
     return (
         <ScrollView contentContainerStyle={styles.scrollContainer}>
             <View style={styles.container}>
+                <CreditBalance credits={credits} />
                 <Text style={styles.title}>Sketch2ArtAI</Text>
                 <Text style={styles.subtitle}>
                     Transform your sketches into beautiful art

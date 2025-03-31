@@ -44,22 +44,27 @@ export default function HistoryScreen({ navigation }) {
                 setLoadingMore(true);
             }
 
-            console.log(`Fetching history page ${page} from: ${API_URL}/history`);
+            console.log(
+                `Fetching history page ${page} from: ${API_URL}/history`
+            );
             const response = await axios.get(`${API_URL}/history`, {
                 headers: {
                     Authorization: `Bearer ${userToken}`,
                 },
                 params: {
                     page,
-                    limit: 10
-                }
+                    limit: 10,
+                },
             });
 
             console.log("History data received:", response.data);
 
             // Update state based on whether we're appending or replacing
             if (append) {
-                setHistory(prevHistory => [...prevHistory, ...response.data.history]);
+                setHistory((prevHistory) => [
+                    ...prevHistory,
+                    ...response.data.history,
+                ]);
             } else {
                 setHistory(response.data.history);
             }
@@ -439,7 +444,12 @@ export default function HistoryScreen({ navigation }) {
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={styles.convertButton}
-                                    onPress={() => handleOpenConversionModal(item.originalImageUrl, 'original')}
+                                    onPress={() =>
+                                        handleOpenConversionModal(
+                                            item.originalImageUrl,
+                                            "original"
+                                        )
+                                    }
                                 >
                                     <Text style={styles.convertButtonText}>
                                         Convert Again
@@ -471,7 +481,12 @@ export default function HistoryScreen({ navigation }) {
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={styles.convertButton}
-                                    onPress={() => handleOpenConversionModal(item.convertedImageUrl, 'converted')}
+                                    onPress={() =>
+                                        handleOpenConversionModal(
+                                            item.convertedImageUrl,
+                                            "converted"
+                                        )
+                                    }
                                 >
                                     <Text style={styles.convertButtonText}>
                                         Convert Again
@@ -589,11 +604,14 @@ export default function HistoryScreen({ navigation }) {
         const lineSegments = prompt.split(/\r?\n/);
 
         // Then split each line by commas and flatten the array
-        const allSegments = lineSegments.flatMap(line => {
+        const allSegments = lineSegments.flatMap((line) => {
             // Skip empty lines
             if (!line.trim()) return [];
             // Split by comma and trim each segment
-            return line.split(',').map(segment => segment.trim()).filter(segment => segment);
+            return line
+                .split(",")
+                .map((segment) => segment.trim())
+                .filter((segment) => segment);
         });
 
         return allSegments;
@@ -700,7 +718,7 @@ export default function HistoryScreen({ navigation }) {
                 await new Promise((resolve) => {
                     reader.onloadend = () => {
                         // Get base64 data without the prefix
-                        const base64data = reader.result.split(',')[1];
+                        const base64data = reader.result.split(",")[1];
                         formData.append("base64Data", base64data);
                         formData.append("mimeType", blob.type);
                         resolve();
@@ -772,8 +790,35 @@ export default function HistoryScreen({ navigation }) {
         }
     };
 
+    const renderAdminButtons = () => {
+        if (userInfo?.isAdmin) {
+            return (
+                <View style={styles.adminButtonsContainer}>
+                    <TouchableOpacity
+                        style={styles.adminButton}
+                        onPress={() => navigation.navigate("AdminHistory")}
+                    >
+                        <Text style={styles.adminButtonText}>
+                            View All Users' History
+                        </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.adminButton}
+                        onPress={() => navigation.navigate("AdminCredits")}
+                    >
+                        <Text style={styles.adminButtonText}>
+                            Manage User Credits
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            );
+        }
+        return null;
+    };
+
     return (
         <View style={styles.container}>
+            {renderAdminButtons()}
             <View style={styles.headerContainer}>
                 <Text style={styles.title}>Conversion History</Text>
 
@@ -818,22 +863,31 @@ export default function HistoryScreen({ navigation }) {
                         onRefresh={handleRefresh}
                         onEndReached={loadMoreHistory}
                         onEndReachedThreshold={0.5}
-                        ListFooterComponent={() => (
+                        ListFooterComponent={() =>
                             hasMoreItems ? (
                                 <View style={styles.loadMoreContainer}>
                                     {loadingMore ? (
-                                        <ActivityIndicator size="small" color="#4a90e2" />
+                                        <ActivityIndicator
+                                            size="small"
+                                            color="#4a90e2"
+                                        />
                                     ) : (
                                         <TouchableOpacity
                                             style={styles.loadMoreButton}
                                             onPress={loadMoreHistory}
                                         >
-                                            <Text style={styles.loadMoreButtonText}>Load More</Text>
+                                            <Text
+                                                style={
+                                                    styles.loadMoreButtonText
+                                                }
+                                            >
+                                                Load More
+                                            </Text>
                                         </TouchableOpacity>
                                     )}
                                 </View>
                             ) : null
-                        )}
+                        }
                     />
                 </>
             )}
@@ -1103,17 +1157,36 @@ const styles = StyleSheet.create({
     },
     loadMoreContainer: {
         paddingVertical: 20,
-        alignItems: 'center',
+        alignItems: "center",
     },
     loadMoreButton: {
-        backgroundColor: '#4a90e2',
+        backgroundColor: "#4a90e2",
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 25,
     },
     loadMoreButtonText: {
-        color: 'white',
+        color: "white",
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: "600",
+    },
+    adminButtonsContainer: {
+        padding: 16,
+        flexDirection: "row",
+        justifyContent: "space-around",
+        flexWrap: "wrap",
+        gap: 10,
+    },
+    adminButton: {
+        backgroundColor: "#4a90e2",
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        elevation: 2,
+    },
+    adminButtonText: {
+        color: "#fff",
+        fontWeight: "600",
+        fontSize: 14,
     },
 });

@@ -4,12 +4,34 @@ const { uploadToFreeImageHost } = require("../utils/imageUpload");
 const { readFileAsBase64 } = require("../utils/fileUtils");
 const { getGeminiModel, defaultGenerationConfig } = require("../config/gemini");
 const ImageHistory = require("../models/ImageHistory");
+const Credit = require("../models/Credit");
+const User = require("../models/User");
 
 /**
  * Convert a sketch to art using Gemini AI
  */
 const convertSketch = async (req, res) => {
     try {
+        // Check user credits first
+        const credit = await Credit.findOne({ user: req.user._id });
+
+        // Check if user is admin
+        const isAdmin = req.user.isAdmin;
+
+        if (!isAdmin) {
+            if (!credit || credit.balance < 1) {
+                return res.status(402).json({
+                    error: "Insufficient credits",
+                    creditsRequired: 1,
+                    currentBalance: credit ? credit.balance : 0,
+                });
+            }
+
+            // Deduct credits before processing
+            credit.balance -= 1;
+            await credit.save();
+        }
+
         console.log("Received convert request");
         console.log("Request body keys:", Object.keys(req.body));
         console.log("Request file:", req.file ? "File received" : "No file");

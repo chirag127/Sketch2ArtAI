@@ -16,6 +16,8 @@ import VerifyEmailScreen from "./screens/VerifyEmailScreen";
 import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
 import ResetPasswordScreen from "./screens/ResetPasswordScreen";
 import ProfileScreen from "./screens/ProfileScreen";
+import CreditWalletScreen from "./screens/CreditWalletScreen";
+import AdminCreditScreen from "./screens/AdminCreditScreen";
 import { AuthProvider, AuthContext } from "./context/AuthContext";
 
 const Stack = createNativeStackNavigator();
@@ -87,6 +89,20 @@ function HomeStack() {
                 component={BasicCanvasScreen}
                 options={{ headerShown: false }}
             />
+            <Stack.Screen
+                name="CreditWallet"
+                component={CreditWalletScreen}
+                options={{
+                    title: "Credits & Purchases",
+                    headerStyle: {
+                        backgroundColor: "#007AFF",
+                    },
+                    headerTintColor: "#fff",
+                    headerTitleStyle: {
+                        fontWeight: "bold",
+                    },
+                }}
+            />
         </Stack.Navigator>
     );
 }
@@ -105,6 +121,20 @@ function HistoryStack() {
                 component={AdminHistoryScreen}
                 options={{
                     title: "Admin History",
+                    headerStyle: {
+                        backgroundColor: "#4a90e2",
+                    },
+                    headerTintColor: "#fff",
+                    headerTitleStyle: {
+                        fontWeight: "bold",
+                    },
+                }}
+            />
+            <Stack.Screen
+                name="AdminCredits"
+                component={AdminCreditScreen}
+                options={{
+                    title: "Credit Management",
                     headerStyle: {
                         backgroundColor: "#4a90e2",
                     },

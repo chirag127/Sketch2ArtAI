@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Modal,
     View,
@@ -11,6 +11,9 @@ import {
     Platform,
     Alert,
 } from "react-native";
+import axios from "axios";
+// C:\AM\Github\Sketch2ArtAI\frontend\env.js
+import { API_URL } from "../env"; // Adjust the import path as necessary
 
 const ConversionModal = ({
     visible,
@@ -23,6 +26,24 @@ const ConversionModal = ({
     const [customPrompt, setCustomPrompt] = useState(
         "Create a detailed and creative image"
     );
+    const [credits, setCredits] = useState(0);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (visible) {
+            fetchCredits();
+        }
+    }, [visible]);
+
+    const fetchCredits = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/credits/balance`);
+            setCredits(response.data.balance);
+        } catch (error) {
+            console.error("Error fetching credits:", error);
+            Alert.alert("Error", "Failed to fetch credit balance");
+        }
+    };
 
     const styleOptions = [
         "Custom Prompt Only", // Added option for custom prompt without style
@@ -52,7 +73,7 @@ const ConversionModal = ({
         "Hyperrealism",
     ];
 
-    const handleConvert = () => {
+    const handleConvert = async () => {
         // Check if no prompt is provided - now required for all styles
         if (!customPrompt.trim()) {
             Alert.alert(
@@ -61,7 +82,64 @@ const ConversionModal = ({
             );
             return;
         }
-        onConvert(selectedStyle, customPrompt);
+
+        if (credits < 1) {
+            Alert.alert(
+                "Insufficient Credits",
+                "You need at least 1 credit to generate an image. Would you like to purchase more credits?",
+                [
+                    {
+                        text: "Cancel",
+                        style: "cancel",
+                    },
+                    {
+                        text: "Buy Credits",
+                        onPress: () => {
+                            onClose();
+                            // Navigate to credit wallet screen
+                            navigation.navigate("CreditWallet");
+                        },
+                    },
+                ]
+            );
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await onConvert(selectedStyle, customPrompt);
+            // Update credits after successful conversion
+            fetchCredits();
+        } catch (error) {
+            Alert.alert("Error", "Failed to generate image");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const renderCreditWarning = () => {
+        if (credits < 5) {
+            return (
+                <View style={styles.warningContainer}>
+                    <Text style={styles.warningText}>
+                        Low Credits! You have {credits} credit
+                        {credits !== 1 ? "s" : ""} remaining.
+                    </Text>
+                    <TouchableOpacity
+                        style={styles.buyCreditsButton}
+                        onPress={() => {
+                            onClose();
+                            navigation.navigate("CreditWallet");
+                        }}
+                    >
+                        <Text style={styles.buyCreditsText}>
+                            Buy More Credits
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            );
+        }
+        return null;
     };
 
     return (
@@ -78,6 +156,17 @@ const ConversionModal = ({
                         {imageType === "original" ? "Original" : "Converted"}{" "}
                         Image
                     </Text>
+
+                    <View style={styles.creditInfo}>
+                        <Text style={styles.creditBalance}>
+                            Credits: {credits}
+                        </Text>
+                        <Text style={styles.creditCost}>
+                            Cost: 1 credit per image
+                        </Text>
+                    </View>
+
+                    {renderCreditWarning()}
 
                     <Text style={styles.sectionTitle}>Select Art Style</Text>
                     <ScrollView
@@ -122,7 +211,7 @@ const ConversionModal = ({
                         <TouchableOpacity
                             style={styles.cancelButton}
                             onPress={onClose}
-                            disabled={isConverting}
+                            disabled={isConverting || loading}
                         >
                             <Text style={styles.cancelButtonText}>Cancel</Text>
                         </TouchableOpacity>
@@ -130,12 +219,13 @@ const ConversionModal = ({
                         <TouchableOpacity
                             style={[
                                 styles.convertButton,
-                                isConverting && styles.disabledButton,
+                                (isConverting || loading) &&
+                                    styles.disabledButton,
                             ]}
                             onPress={handleConvert}
-                            disabled={isConverting}
+                            disabled={isConverting || loading || credits < 1}
                         >
-                            {isConverting ? (
+                            {isConverting || loading ? (
                                 <ActivityIndicator color="#fff" size="small" />
                             ) : (
                                 <Text style={styles.convertButtonText}>
@@ -172,6 +262,16 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         marginBottom: 15,
         textAlign: "center",
+    },
+    creditsText: {
+        fontSize: 18,
+        fontWeight: "bold",
+        marginBottom: 8,
+    },
+    costText: {
+        fontSize: 16,
+        color: "#666",
+        marginBottom: 16,
     },
     sectionTitle: {
         fontSize: 16,
@@ -245,6 +345,50 @@ const styles = StyleSheet.create({
     },
     convertButtonText: {
         color: "white",
+        fontWeight: "600",
+    },
+    creditInfo: {
+        backgroundColor: "#f8f9fa",
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 16,
+    },
+    creditBalance: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#007AFF",
+        marginBottom: 4,
+    },
+    creditCost: {
+        fontSize: 14,
+        color: "#666",
+    },
+    warningContainer: {
+        backgroundColor: "#fff3cd",
+        borderColor: "#ffeeba",
+        borderWidth: 1,
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 16,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+    },
+    warningText: {
+        color: "#856404",
+        fontSize: 14,
+        flex: 1,
+        marginRight: 8,
+    },
+    buyCreditsButton: {
+        backgroundColor: "#007AFF",
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 6,
+    },
+    buyCreditsText: {
+        color: "#fff",
+        fontSize: 14,
         fontWeight: "600",
     },
 });

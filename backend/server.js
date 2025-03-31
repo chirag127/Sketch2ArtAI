@@ -9,6 +9,7 @@ const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const { uploadToFreeImageHost } = require("./utils/imageUpload");
 require("dotenv").config();
+const { scheduleCreditRenewal } = require("./tasks/creditRenewal");
 
 // Import models
 const ImageHistory = require("./models/ImageHistory");
@@ -21,6 +22,8 @@ const admin = require("./middleware/admin");
 
 // Import routes
 const authRoutes = require("./routes/auth");
+const creditRoutes = require("./routes/credits");
+const webhookRoutes = require("./routes/webhooks");
 
 // Promisify fs functions
 const readdir = promisify(fs.readdir);
@@ -58,6 +61,8 @@ app.get("/api/health", (req, res) => {
 
 // Use auth routes
 app.use("/api/auth", authRoutes);
+app.use("/api/credits", creditRoutes);
+app.use("/api/webhooks", webhookRoutes);
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -892,3 +897,6 @@ app.listen(port, () => {
         cleanupOldFiles(outputsDir);
     }, 30 * 60 * 1000); // 30 minutes
 });
+
+// Initialize cron jobs
+scheduleCreditRenewal();
