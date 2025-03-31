@@ -7,12 +7,18 @@ import {
     TouchableOpacity,
     Alert,
     ActivityIndicator,
+    Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import { API_URL } from "../env";
 import { useAuth } from "../context/AuthContext";
-import { RazorpayCheckout } from "react-native-razorpay";
+// Only import RazorpayCheckout for mobile platforms
+const RazorpayCheckout = Platform.select({
+    ios: () => require("react-native-razorpay").RazorpayCheckout,
+    android: () => require("react-native-razorpay").RazorpayCheckout,
+    default: () => null,
+})();
 
 const CreditPackages = [
     { credits: 500, amount: 100, label: "500 Credits" },
@@ -65,6 +71,16 @@ const CreditWalletScreen = () => {
     const handlePurchase = async (creditPackage) => {
         try {
             setLoading(true);
+
+            // Check if we're on web platform
+            if (Platform.OS === 'web') {
+                Alert.alert(
+                    "Web Platform",
+                    "Credit purchase is currently only available on mobile devices. Please use our mobile app to purchase credits."
+                );
+                return;
+            }
+
             const orderResponse = await axios.post(`${API_URL}/credits/order`, {
                 amount: creditPackage.amount,
             });
