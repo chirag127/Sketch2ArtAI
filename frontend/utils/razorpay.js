@@ -14,7 +14,9 @@ const showLoadingOverlay = () => {
     loadingContainer = document.createElement("div");
     document.body.appendChild(loadingContainer);
     loadingRoot = createRoot(loadingContainer);
-    loadingRoot.render(<LoadingOverlay message="Initializing payment gateway..." />);
+    loadingRoot.render(
+        <LoadingOverlay message="Initializing payment gateway..." />
+    );
 };
 
 const hideLoadingOverlay = () => {
@@ -30,7 +32,7 @@ const hideLoadingOverlay = () => {
 
 export const loadRazorpayScript = () => {
     if (Platform.OS !== "web") return Promise.resolve(false);
-    
+
     if (razorpayScriptLoaded) {
         return Promise.resolve(true);
     }
@@ -71,17 +73,21 @@ export const initializeRazorpayPayment = async (options) => {
                     const rzp = new window.Razorpay({
                         ...options,
                         key: RAZORPAY_KEY_ID,
-                        handler: function(response) {
+                        handler: function (response) {
                             resolve(response);
                         },
                         modal: {
-                            ondismiss: function() {
+                            ondismiss: function () {
                                 reject(new Error("Payment cancelled by user"));
-                            }
-                        }
+                            },
+                        },
                     });
-                    rzp.on("payment.failed", function(response) {
-                        reject(new Error("Payment failed: " + response.error.description));
+                    rzp.on("payment.failed", function (response) {
+                        reject(
+                            new Error(
+                                "Payment failed: " + response.error.description
+                            )
+                        );
                     });
                     rzp.open();
                 } catch (error) {

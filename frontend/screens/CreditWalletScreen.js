@@ -8,6 +8,7 @@ import {
     Alert,
     ActivityIndicator,
     Platform,
+    ScrollView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
@@ -168,7 +169,7 @@ const CreditWalletScreen = () => {
 
     return (
         <PaymentErrorBoundary>
-            <View style={containerStyle}>
+            <ScrollView style={containerStyle}>
                 <View
                     style={[
                         styles.balanceContainer,
@@ -236,9 +237,11 @@ const CreditWalletScreen = () => {
                                 No transactions yet
                             </Text>
                         )}
+                        nestedScrollEnabled
+                        scrollEnabled={false}
                     />
                 </View>
-            </View>
+            </ScrollView>
         </PaymentErrorBoundary>
     );
 };
@@ -246,7 +249,6 @@ const CreditWalletScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 16,
         backgroundColor: "#fff",
     },
     balanceContainer: {
