@@ -6,16 +6,18 @@ const { getGeminiModel, defaultGenerationConfig } = require("../config/gemini");
 const ImageHistory = require("../models/ImageHistory");
 const Credit = require("../models/Credit");
 const User = require("../models/User");
+const { logCreditOperation } = require("../utils/creditLogger");
 
 /**
  * Convert a sketch to art using Gemini AI
  */
 const convertSketch = async (req, res) => {
+    let creditDeducted = false;
+    let credit;
+    
     try {
         // Check user credits first
-        const credit = await Credit.findOne({ user: req.user._id });
-
-        // Check if user is admin
+        credit = await Credit.findOne({ user: req.user._id });
         const isAdmin = req.user.isAdmin;
 
         if (!isAdmin) {
@@ -27,9 +29,24 @@ const convertSketch = async (req, res) => {
                 });
             }
 
-            // Deduct credits before processing
-            credit.balance -= 1;
-            await credit.save();
+            // Use findOneAndUpdate with optimistic locking to prevent race conditions
+            const updatedCredit = await Credit.findOneAndUpdate(
+                { user: req.user._id, balance: { $gte: 1 } },
+                { $inc: { balance: -1 } },
+                { new: true }
+            );
+
+            if (!updatedCredit) {
+                return res.status(402).json({
+                    error: "Failed to deduct credits",
+                    details: "Please try again"
+                });
+            }
+
+            creditDeducted = true;
+            credit = updatedCredit;
+            console.log(`Deducted 1 credit from user ${req.user._id}. New balance: ${credit.balance}`);
+            logCreditOperation(req.user._id, "deduct", 1, credit.balance);
         }
 
         console.log("Received convert request");
@@ -361,6 +378,21 @@ const convertSketch = async (req, res) => {
         }
     } catch (error) {
         console.error("Error processing sketch:", error);
+
+        // Refund the credit if it was deducted and there was an error
+        if (creditDeducted && !isAdmin) {
+            try {
+                const refundedCredit = await Credit.findOneAndUpdate(
+                    { user: req.user._id },
+                    { $inc: { balance: 1 } },
+                    { new: true }
+                );
+                console.log(`Refunded 1 credit to user ${req.user._id}. New balance: ${refundedCredit.balance}`);
+                logCreditOperation(req.user._id, "refund", 1, refundedCredit.balance);
+            } catch (refundError) {
+                console.error("Error refunding credit:", refundError);
+            }
+        }
 
         // Check if the error is related to the Gemini API
         if (error.message && error.message.includes("PERMISSION_DENIED")) {

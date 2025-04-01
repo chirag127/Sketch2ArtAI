@@ -558,6 +558,9 @@ export default function HomeScreen({ navigation, route }) {
                 // Clear original image since this was a prompt-only request
                 setOriginalImageUrl("");
                 setSketch(null);
+
+                // Refresh credit balance after successful generation
+                fetchCredits();
             } else {
                 Alert.alert("Error", "Failed to generate image");
                 setResponseText("");
@@ -689,6 +692,9 @@ export default function HomeScreen({ navigation, route }) {
             // Clear original image since this was a prompt-only request
             setOriginalImageUrl("");
             setSketch(null);
+
+            // Refresh credit balance after successful generation
+            fetchCredits();
         } catch (error) {
             console.error("Error generating with multiple prompts:", error);
             if (Platform.OS === "web") {
@@ -808,6 +814,9 @@ export default function HomeScreen({ navigation, route }) {
             // Clear original image since this was a prompt-only request
             setOriginalImageUrl("");
             setSketch(null);
+
+            // Refresh credit balance after successful generation
+            fetchCredits();
         } catch (error) {
             console.error("Error generating with all styles:", error);
             if (Platform.OS === "web") {
@@ -907,6 +916,9 @@ export default function HomeScreen({ navigation, route }) {
                     console.log("Original image URL:", result.originalImageUrl);
                     setOriginalImageUrl(result.originalImageUrl);
                 }
+
+                // Refresh credit balance after successful conversion
+                fetchCredits();
             } else {
                 Alert.alert("Error", "Failed to convert sketch");
                 setResponseText("");
