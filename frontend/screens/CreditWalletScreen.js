@@ -13,12 +13,9 @@ import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import { API_URL } from "../env";
 import { useAuth } from "../context/AuthContext";
-// Only import RazorpayCheckout for mobile platforms
-const RazorpayCheckout = Platform.select({
-    ios: () => require("react-native-razorpay").RazorpayCheckout,
-    android: () => require("react-native-razorpay").RazorpayCheckout,
-    default: () => null,
-})();
+import { showAlert } from "../utils/dialog";
+import PaymentErrorBoundary from "../components/PaymentErrorBoundary";
+import { initializeRazorpayPayment } from "../utils/razorpay";
 
 const CreditPackages = [
     { credits: 500, amount: 100, label: "500 Credits" },
@@ -31,7 +28,7 @@ const CreditWalletScreen = () => {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
-    const { user } = useAuth();
+    const { userInfo } = useAuth();
     const navigation = useNavigation();
 
     useEffect(() => {
@@ -71,57 +68,62 @@ const CreditWalletScreen = () => {
     const handlePurchase = async (creditPackage) => {
         try {
             setLoading(true);
-
-            // Check if we're on web platform
-            if (Platform.OS === 'web') {
-                Alert.alert(
-                    "Web Platform",
-                    "Credit purchase is currently only available on mobile devices. Please use our mobile app to purchase credits."
-                );
-                return;
-            }
+            console.log("Creating order...");
 
             const orderResponse = await axios.post(`${API_URL}/credits/order`, {
                 amount: creditPackage.amount,
             });
 
+            console.log("Order created:", orderResponse.data);
+
             const options = {
                 description: `Purchase ${creditPackage.credits} Credits`,
                 image: "your_app_logo_url",
                 currency: "INR",
-                key: process.env.RAZORPAY_KEY_ID,
                 amount: orderResponse.data.amount,
                 name: "Sketch2ArtAI",
                 order_id: orderResponse.data.orderId,
                 prefill: {
-                    email: user.email,
-                    contact: user.phone || "",
-                    name: user.name || "",
+                    email: userInfo?.email,
+                    contact: userInfo?.phone || "",
+                    name: userInfo?.name || "",
                 },
                 theme: { color: "#007AFF" },
             };
 
-            const response = await RazorpayCheckout.open(options);
+            console.log("Initializing payment...");
+            const response = await initializeRazorpayPayment(options);
+            console.log("Payment response:", response);
 
             // Verify payment
+            console.log("Verifying payment...");
             await axios.post(`${API_URL}/credits/verify`, {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
             });
 
-            Alert.alert(
+            console.log("Payment verified successfully");
+            showAlert(
                 "Success",
                 `Successfully purchased ${creditPackage.credits} credits!`
             );
-            fetchCredits();
-            fetchTransactions();
+            await fetchCredits();
+            await fetchTransactions();
         } catch (error) {
-            console.error("Payment error:", error);
-            if (error.code === "PAYMENT_CANCELLED") {
-                Alert.alert("Cancelled", "Payment was cancelled");
+            console.error("Purchase error:", error);
+            if (error.message === "Payment cancelled by user") {
+                showAlert("Cancelled", "Payment was cancelled");
+            } else if (error.message?.includes("Failed to load Razorpay")) {
+                showAlert(
+                    "Error",
+                    "Failed to initialize payment gateway. Please try again or contact support."
+                );
             } else {
-                Alert.alert("Error", "Payment failed. Please try again.");
+                showAlert(
+                    "Error",
+                    "Payment failed. Please try again or contact support if the issue persists."
+                );
             }
         } finally {
             setLoading(false);
@@ -155,55 +157,89 @@ const CreditWalletScreen = () => {
         </View>
     );
 
+    const containerStyle = Platform.select({
+        web: {
+            maxWidth: 800,
+            marginHorizontal: "auto",
+            padding: 20,
+        },
+        default: styles.container,
+    });
+
     return (
-        <View style={styles.container}>
-            <View style={styles.balanceContainer}>
-                <Text style={styles.balanceTitle}>Current Balance</Text>
-                {loading ? (
-                    <ActivityIndicator size="large" color="#007AFF" />
-                ) : (
-                    <Text style={styles.balanceText}>{credits} Credits</Text>
-                )}
-            </View>
-
-            <View style={styles.purchaseContainer}>
-                <Text style={styles.sectionTitle}>Purchase Credits</Text>
-                <View style={styles.packageContainer}>
-                    {CreditPackages.map((pkg) => (
-                        <TouchableOpacity
-                            key={pkg.credits}
-                            style={styles.packageButton}
-                            onPress={() => handlePurchase(pkg)}
-                            disabled={loading}
-                        >
-                            <Text style={styles.packageCredits}>
-                                {pkg.label}
-                            </Text>
-                            <Text style={styles.packagePrice}>
-                                ₹{pkg.amount}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            </View>
-
-            <View style={styles.historyContainer}>
-                <Text style={styles.sectionTitle}>Transaction History</Text>
-                <FlatList
-                    data={transactions}
-                    renderItem={renderTransaction}
-                    keyExtractor={(item) => item._id}
-                    refreshing={refreshing}
-                    onRefresh={handleRefresh}
-                    contentContainerStyle={styles.transactionList}
-                    ListEmptyComponent={() => (
-                        <Text style={styles.emptyText}>
-                            No transactions yet
+        <PaymentErrorBoundary>
+            <View style={containerStyle}>
+                <View
+                    style={[
+                        styles.balanceContainer,
+                        Platform.OS === "web" && { marginTop: 40 },
+                    ]}
+                >
+                    <Text style={styles.balanceTitle}>Current Balance</Text>
+                    {loading ? (
+                        <ActivityIndicator size="large" color="#007AFF" />
+                    ) : (
+                        <Text style={styles.balanceText}>
+                            {credits} Credits
                         </Text>
                     )}
-                />
+                </View>
+
+                <View style={styles.purchaseContainer}>
+                    <Text style={styles.sectionTitle}>Purchase Credits</Text>
+                    <View
+                        style={[
+                            styles.packageContainer,
+                            Platform.OS === "web" && {
+                                maxWidth: 600,
+                                marginHorizontal: "auto",
+                            },
+                        ]}
+                    >
+                        {CreditPackages.map((pkg) => (
+                            <TouchableOpacity
+                                key={pkg.credits}
+                                style={styles.packageButton}
+                                onPress={() => handlePurchase(pkg)}
+                                disabled={loading}
+                            >
+                                <Text style={styles.packageCredits}>
+                                    {pkg.label}
+                                </Text>
+                                <Text style={styles.packagePrice}>
+                                    ₹{pkg.amount}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+
+                <View
+                    style={[
+                        styles.historyContainer,
+                        Platform.OS === "web" && {
+                            maxWidth: 600,
+                            marginHorizontal: "auto",
+                        },
+                    ]}
+                >
+                    <Text style={styles.sectionTitle}>Transaction History</Text>
+                    <FlatList
+                        data={transactions}
+                        renderItem={renderTransaction}
+                        keyExtractor={(item) => item._id}
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        contentContainerStyle={styles.transactionList}
+                        ListEmptyComponent={() => (
+                            <Text style={styles.emptyText}>
+                                No transactions yet
+                            </Text>
+                        )}
+                    />
+                </View>
             </View>
-        </View>
+        </PaymentErrorBoundary>
     );
 };
 
@@ -248,9 +284,11 @@ const styles = StyleSheet.create({
         backgroundColor: "#007AFF",
         padding: 16,
         borderRadius: 12,
-        width: "48%",
+        width: Platform.OS === "web" ? 280 : "48%",
         marginBottom: 12,
+        marginHorizontal: Platform.OS === "web" ? 10 : 0,
         alignItems: "center",
+        cursor: Platform.OS === "web" ? "pointer" : "default",
     },
     packageCredits: {
         color: "#fff",

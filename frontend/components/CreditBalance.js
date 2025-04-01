@@ -1,5 +1,12 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from "react-native";
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    StyleSheet,
+    Alert,
+    Platform,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { showAlert } from "../utils/dialog";
 
@@ -8,20 +15,19 @@ const CreditBalance = ({ credits, showBuyButton = true }) => {
 
     const handleBuyCredits = () => {
         try {
-            if (Platform.OS === 'web') {
-                showAlert(
-                    "Mobile Only Feature",
-                    "Credit purchase is currently only available on mobile devices. Please use our mobile app to purchase credits."
-                );
-                return;
-            }
             navigation.navigate("CreditWallet");
         } catch (error) {
             console.error("Navigation error:", error);
-            if (Platform.OS === 'web') {
-                showAlert("Error", "Failed to navigate to credit purchase screen");
+            if (Platform.OS === "web") {
+                showAlert(
+                    "Error",
+                    "Failed to navigate to credit purchase screen"
+                );
             } else {
-                Alert.alert("Error", "Failed to navigate to credit purchase screen");
+                Alert.alert(
+                    "Error",
+                    "Failed to navigate to credit purchase screen"
+                );
             }
         }
     };

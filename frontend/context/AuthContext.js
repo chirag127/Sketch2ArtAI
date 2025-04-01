@@ -1,9 +1,17 @@
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect, useContext } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { API_URL } from "../env";
 
 export const AuthContext = createContext();
+
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error("useAuth must be used within an AuthProvider");
+    }
+    return context;
+};
 
 export const AuthProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(true);

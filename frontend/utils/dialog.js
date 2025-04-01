@@ -167,11 +167,25 @@ export const showConfirmDialog = (title, message, onConfirm, onCancel) => {
  * @param {string} message - The message to display
  * @param {Function} onOk - Function to call when OK is pressed
  */
-export const showAlert = (title, message, onOk) => {
-    const buttons = [{ text: "OK", onPress: onOk }];
-
-    showDialog(title, message, buttons);
+export const showAlert = (title, message, buttons = [{ text: "OK" }]) => {
+    if (Platform.OS === "web") {
+        // For web platform, use browser's native alert or a custom modal
+        if (buttons.length === 1 && buttons[0].text === "OK") {
+            window.alert(`${title}\n\n${message}`);
+        } else {
+            const shouldProceed = window.confirm(`${title}\n\n${message}`);
+            if (shouldProceed && buttons.find((b) => b.text !== "Cancel")) {
+                const confirmButton = buttons.find((b) => b.text !== "Cancel");
+                confirmButton?.onPress?.();
+            }
+        }
+    } else {
+        // For mobile platforms, use React Native's Alert
+        Alert.alert(title, message, buttons);
+    }
 };
+
+export default showAlert;
 
 /**
  * Shows a delete confirmation dialog

@@ -11,8 +11,8 @@ import {
     Platform,
     Alert,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
-// C:\AM\Github\Sketch2ArtAI\frontend\env.js
 import { API_URL } from "../env"; // Adjust the import path as necessary
 
 const ConversionModal = ({
@@ -22,6 +22,7 @@ const ConversionModal = ({
     isConverting,
     imageType,
 }) => {
+    const navigation = useNavigation();
     const [selectedStyle, setSelectedStyle] = useState("Anime");
     const [customPrompt, setCustomPrompt] = useState(
         "Create a detailed and creative image"
@@ -73,6 +74,11 @@ const ConversionModal = ({
         "Hyperrealism",
     ];
 
+    const handleBuyCredits = () => {
+        onClose();
+        navigation.navigate("CreditWallet");
+    };
+
     const handleConvert = async () => {
         // Check if no prompt is provided - now required for all styles
         if (!customPrompt.trim()) {
@@ -94,11 +100,7 @@ const ConversionModal = ({
                     },
                     {
                         text: "Buy Credits",
-                        onPress: () => {
-                            onClose();
-                            // Navigate to credit wallet screen
-                            navigation.navigate("CreditWallet");
-                        },
+                        onPress: handleBuyCredits,
                     },
                 ]
             );
@@ -253,7 +255,7 @@ const styles = StyleSheet.create({
         backgroundColor: "white",
         borderRadius: 10,
         padding: 20,
-        width: Platform.OS === "web" ? "80%" : "90%",
+        width: "90%",
         maxWidth: 500,
         maxHeight: "80%",
     },
