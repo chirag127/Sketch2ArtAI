@@ -33,7 +33,7 @@ export default function HomeScreen({ navigation, route }) {
     const [sketch, setSketch] = useState(null);
     const [convertedArt, setConvertedArt] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [style, setStyle] = useState("Anime");
+    const [style, setStyle] = useState("Ghibli");
     const [customPrompt, setCustomPrompt] = useState(
         "Create a detailed and creative image"
     );
@@ -212,15 +212,17 @@ export default function HomeScreen({ navigation, route }) {
                 formData.append("style", currentStyle);
             }
 
-            // Add custom prompt - now required for all conversions
+            // Add custom prompt if provided
             // If a specific prompt is passed, use that instead of the global customPrompt
             const promptToUse =
                 specificPrompt !== null ? specificPrompt : customPrompt;
-            if (promptToUse.trim()) {
+            if (promptToUse && promptToUse.trim()) {
                 formData.append("customPrompt", promptToUse.trim());
-            } else {
-                // Prompt is now required for all styles
-                throw new Error("A prompt is required for all conversions");
+            } else if (currentStyle === "Custom Prompt Only") {
+                // Prompt is required only for Custom Prompt Only style
+                throw new Error(
+                    "A prompt is required when using Custom Prompt Only style"
+                );
             }
 
             if (!isPartOfBatch) {
@@ -272,23 +274,17 @@ export default function HomeScreen({ navigation, route }) {
         }
     };
 
-    // Function to split custom prompt by line breaks and commas
+    // Function to split custom prompt by line breaks only (no comma splitting)
     const splitCustomPrompt = (prompt) => {
         if (!prompt || !prompt.trim()) return [];
 
-        // First split by line breaks
+        // Split by line breaks only
         const lineSegments = prompt.split(/\r?\n/);
 
-        // Then split each line by commas and flatten the array
-        const allSegments = lineSegments.flatMap((line) => {
-            // Skip empty lines
-            if (!line.trim()) return [];
-            // Split by comma and trim each segment
-            return line
-                .split(",")
-                .map((segment) => segment.trim())
-                .filter((segment) => segment);
-        });
+        // Filter out empty lines and trim each line
+        const allSegments = lineSegments
+            .map((line) => line.trim())
+            .filter((line) => line);
 
         return allSegments;
     };
@@ -855,17 +851,17 @@ export default function HomeScreen({ navigation, route }) {
             return;
         }
 
-        // Check if no prompt is provided - now required for all styles
-        if (!customPrompt.trim()) {
+        // Prompt is only required for Custom Prompt Only style
+        if (style === "Custom Prompt Only" && !customPrompt.trim()) {
             if (Platform.OS === "web") {
                 showAlert(
                     "Prompt Required",
-                    "Please enter a prompt to describe what you want to create"
+                    "Please enter a prompt when using Custom Prompt Only style"
                 );
             } else {
                 Alert.alert(
                     "Prompt Required",
-                    "Please enter a prompt to describe what you want to create"
+                    "Please enter a prompt when using Custom Prompt Only style"
                 );
             }
             return;
@@ -1100,6 +1096,7 @@ export default function HomeScreen({ navigation, route }) {
     const styleOptions = [
         "All Styles", // Added All Styles option at the top
         "Custom Prompt Only", // Added option for custom prompt without style
+        "Ghibli", // Added Ghibli style option
         "Cyberpunk Neon",
         "Watercolor Wash",
         "Retro Pixel Art",
@@ -1190,11 +1187,11 @@ export default function HomeScreen({ navigation, route }) {
                     ))}
                 </ScrollView>
 
-                <Text style={styles.sectionTitle}>Prompt (Required)</Text>
+                <Text style={styles.sectionTitle}>Prompt (Optional)</Text>
                 <View style={styles.customPromptContainer}>
                     <TextInput
                         style={styles.customPromptInput}
-                        placeholder="Describe what you want to create (required)"
+                        placeholder="Describe what you want to create (optional for sketches)"
                         placeholderTextColor="#999"
                         value={customPrompt}
                         onChangeText={setCustomPrompt}
@@ -1202,9 +1199,11 @@ export default function HomeScreen({ navigation, route }) {
                         numberOfLines={3}
                     />
                     <Text style={styles.promptHelpText}>
-                        A prompt is required for all generations. Separate
-                        multiple prompts with commas or line breaks. You can
-                        generate images with just a prompt, no sketch needed.
+                        A prompt is optional when converting sketches but
+                        required for Custom Prompt Only style. Separate multiple
+                        prompts with line breaks (each line will be processed as
+                        a separate prompt). You can generate images with just a
+                        prompt, no sketch needed.
                     </Text>
                 </View>
 

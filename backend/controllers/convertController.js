@@ -14,7 +14,7 @@ const { logCreditOperation } = require("../utils/creditLogger");
 const convertSketch = async (req, res) => {
     let creditDeducted = false;
     let credit;
-    
+
     try {
         // Check user credits first
         credit = await Credit.findOne({ user: req.user._id });
@@ -39,13 +39,15 @@ const convertSketch = async (req, res) => {
             if (!updatedCredit) {
                 return res.status(402).json({
                     error: "Failed to deduct credits",
-                    details: "Please try again"
+                    details: "Please try again",
                 });
             }
 
             creditDeducted = true;
             credit = updatedCredit;
-            console.log(`Deducted 1 credit from user ${req.user._id}. New balance: ${credit.balance}`);
+            console.log(
+                `Deducted 1 credit from user ${req.user._id}. New balance: ${credit.balance}`
+            );
             logCreditOperation(req.user._id, "deduct", 1, credit.balance);
         }
 
@@ -82,8 +84,7 @@ const convertSketch = async (req, res) => {
 
         // Get style and custom prompt
         let style = req.body.style || "Anime"; // Default style is Anime
-        const customPrompt =
-            req.body.customPrompt || "Create a detailed and creative image"; // Custom prompt is now required
+        const customPrompt = req.body.customPrompt || ""; // Custom prompt is optional except for Custom Prompt Only style
 
         // If style is "Custom Prompt Only", use a generic style for the AI
         if (style === "Custom Prompt Only") {
@@ -168,9 +169,14 @@ const convertSketch = async (req, res) => {
             style === "Custom Prompt Only" ||
             req.body.style === "Custom Prompt Only"
         ) {
+            if (!customPrompt.trim()) {
+                return res.status(400).json({
+                    error: "Custom prompt is required when using Custom Prompt Only style",
+                });
+            }
             promptMessage = `Generate an image with the following prompt: ${customPrompt}`;
-        } else {
-            // Always add custom prompt - now required for all conversions
+        } else if (customPrompt.trim()) {
+            // Add custom prompt as additional guidance if provided
             promptMessage = `${promptMessage}- Additional prompt: ${customPrompt}`;
         }
 
@@ -387,8 +393,15 @@ const convertSketch = async (req, res) => {
                     { $inc: { balance: 1 } },
                     { new: true }
                 );
-                console.log(`Refunded 1 credit to user ${req.user._id}. New balance: ${refundedCredit.balance}`);
-                logCreditOperation(req.user._id, "refund", 1, refundedCredit.balance);
+                console.log(
+                    `Refunded 1 credit to user ${req.user._id}. New balance: ${refundedCredit.balance}`
+                );
+                logCreditOperation(
+                    req.user._id,
+                    "refund",
+                    1,
+                    refundedCredit.balance
+                );
             } catch (refundError) {
                 console.error("Error refunding credit:", refundError);
             }

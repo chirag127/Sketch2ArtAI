@@ -596,23 +596,17 @@ export default function HistoryScreen({ navigation }) {
         setConversionModalVisible(true);
     };
 
-    // Function to split custom prompt by line breaks and commas
+    // Function to split custom prompt by line breaks only (no comma splitting)
     const splitCustomPrompt = (prompt) => {
         if (!prompt || !prompt.trim()) return [];
 
-        // First split by line breaks
+        // Split by line breaks only
         const lineSegments = prompt.split(/\r?\n/);
 
-        // Then split each line by commas and flatten the array
-        const allSegments = lineSegments.flatMap((line) => {
-            // Skip empty lines
-            if (!line.trim()) return [];
-            // Split by comma and trim each segment
-            return line
-                .split(",")
-                .map((segment) => segment.trim())
-                .filter((segment) => segment);
-        });
+        // Filter out empty lines and trim each line
+        const allSegments = lineSegments
+            .map((line) => line.trim())
+            .filter((line) => line);
 
         return allSegments;
     };

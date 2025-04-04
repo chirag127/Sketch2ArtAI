@@ -23,7 +23,7 @@ const ConversionModal = ({
     imageType,
 }) => {
     const navigation = useNavigation();
-    const [selectedStyle, setSelectedStyle] = useState("Anime");
+    const [selectedStyle, setSelectedStyle] = useState("Custom Prompt Only");
     const [customPrompt, setCustomPrompt] = useState(
         "Create a detailed and creative image"
     );
@@ -48,6 +48,7 @@ const ConversionModal = ({
 
     const styleOptions = [
         "Custom Prompt Only", // Added option for custom prompt without style
+        "Ghibli", // Added Ghibli style option
         "Cyberpunk Neon",
         "Watercolor Wash",
         "Retro Pixel Art",
@@ -80,11 +81,11 @@ const ConversionModal = ({
     };
 
     const handleConvert = async () => {
-        // Check if no prompt is provided - now required for all styles
-        if (!customPrompt.trim()) {
+        // Check if no prompt is provided - only required for Custom Prompt Only style
+        if (selectedStyle === "Custom Prompt Only" && !customPrompt.trim()) {
             Alert.alert(
                 "Prompt Required",
-                "Please enter a prompt to describe what you want to create"
+                "Please enter a prompt when using Custom Prompt Only style"
             );
             return;
         }
@@ -198,10 +199,10 @@ const ConversionModal = ({
                         ))}
                     </ScrollView>
 
-                    <Text style={styles.sectionTitle}>Prompt (Required)</Text>
+                    <Text style={styles.sectionTitle}>Prompt (Optional)</Text>
                     <TextInput
                         style={styles.customPromptInput}
-                        placeholder="Describe what you want to create (required)"
+                        placeholder="Describe what you want to create (optional for sketches)"
                         placeholderTextColor="#999"
                         value={customPrompt}
                         onChangeText={setCustomPrompt}
