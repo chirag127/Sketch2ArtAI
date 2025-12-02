@@ -1,0 +1,28 @@
+build_status:
+  provider: github_actions
+  workflow_name: CI
+  branch: main
+  image: https://img.shields.io/github/actions/workflow/user/chirag127/CogniSketch-AI-Art-Generator-Mobile-Web-App/ci.yml?style=flat-square&logo=github
+
+coverage:
+  provider: codecov
+  branch: main
+  url: https://codecov.io/gh/chirag127/CogniSketch-AI-Art-Generator-Mobile-Web-App
+  image: https://img.shields.io/codecov/c/github/chirag127/CogniSketch-AI-Art-Generator-Mobile-Web-App?style=flat-square&logo=codecov
+
+tech_stack:
+  description: "React Native, TypeScript, Express.js"
+  image: https://img.shields.io/badge/Tech%20Stack-React%20Native%2C%20TS%2C%20Express-blue?style=flat-square
+
+linter_formatter:
+  provider: biome
+  url: https://biome.dev/
+  image: https://img.shields.io/badge/Linter%2FFormatter-Biome-brightgreen?style=flat-square&logo=biome
+
+license:
+  url: https://github.com/chirag127/CogniSketch-AI-Art-Generator-Mobile-Web-App/blob/main/LICENSE
+  image: https://img.shields.io/badge/License-CC%20BY--NC%204.0-orange?style=flat-square
+
+stars:
+  url: https://github.com/chirag127/CogniSketch-AI-Art-Generator-Mobile-Web-App/stargazers
+  image: https://img.shields.io/github/stars/chirag127/CogniSketch-AI-Art-Generator-Mobile-Web-App?style=flat-square&logo=github
