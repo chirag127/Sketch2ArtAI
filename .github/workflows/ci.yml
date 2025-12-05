@@ -1,82 +1,120 @@
-name: CI
+name: Artifex-AI Apex CI/CD Pipeline
 
-# This workflow will do a compile, scan, test, and package
-# with a variety of languages and environments.
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/about-continuous-integration
-
-permissions:
-  contents: read
-  pull-requests: read
-
-on:
+on: 
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+      - dev
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - "**/docs/**"
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+      - dev
+
+env:
+  NODE_VERSION: '20' # Node LTS Standard 20.x
 
 jobs:
-  build-and-test:
+  # ----------------------------------------
+  # STAGE 1: CORE INTEGRITY CHECK (LINT/FORMAT)
+  # ----------------------------------------
+  code_quality:
+    name: "⛔️ Code Quality Assurance (Lint & Format)"
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [20.x, 22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0 # Fetch all history so that --all is available
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm' # Cache npm dependencies
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-    - name: Install Dependencies
-      run: npm ci
+      - name: Install Root Dependencies
+        # Assumes root dependencies handle shared tools like Biome/ESLint
+        run: npm ci
 
-    - name: Setup Biome
-      uses: biomejs/setup-biome@v3
-      with:
-        biome_version: "1.7.3" # Specify the desired Biome version
+      - name: Enforce Code Style and Linting
+        # Assumes 'npm run lint' and 'npm run format:check' scripts exist at root
+        run: |
+          npm run lint
+          npm run format:check
 
-    - name: Lint with Biome
-      run: biome lint --apply --no-warn=false
+  # ----------------------------------------
+  # STAGE 2: SERVER (EXPRESS.JS) PIPELINE
+  # ----------------------------------------
+  server_build_test:
+    name: "⚙️ Server (Express.js) Build & Test"
+    runs-on: ubuntu-latest
+    needs: [code_quality]
+    defaults:
+      run:
+        working-directory: server/ 
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Format with Biome
-      run: biome format --write --no-warn=false
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
 
-    - name: Run Vitest (Unit Tests)
-      run: npm test
+      - name: Install Server Dependencies
+        run: npm ci
 
-    - name: Build Application (e.g., for Production)
-      # This step depends on your project's build command. Assuming 'npm run build'
-      # For React Native Expo, this might be different (e.g., eas build)
-      # This is a placeholder and may need adjustment based on actual build process.
-      run: npm run build --if-present
+      - name: Run Server Unit Tests & Coverage
+        # Assumes 'npm test' runs tests and generates coverage report
+        run: npm test -- --coverage
+        env:
+          NODE_ENV: test
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # Required for AI modules
 
-    # - name: Run Playwright (E2E Tests) - Placeholder
-    #   # This would typically run after a build and potentially after deploying to a test environment.
-    #   # For cross-platform (mobile/web), E2E testing setup can be complex.
-    #   # Ensure Playwright is installed and configured for your target environments (web, Android, iOS).
-    #   # Example (Web): npx playwright install --with-deps
-    #   # Example (Run): npx playwright test
-    #   run: echo "Playwright E2E tests would run here."
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: server/coverage/
+          files: ./coverage/clover.xml # Adjust path based on test runner output
+          fail_ci_if_error: true
 
-    # - name: Upload Artifacts (e.g., build outputs, test reports)
-    #   # Customize artifact names and paths as needed
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: app-build-output
-    #     path: ./dist # Example path, adjust to your build output directory
+      - name: Build Server Artifact
+        # Transpilation step (e.g., if using TypeScript)
+        run: npm run build
 
-    # - name: Codecov Upload - Placeholder
-    #   # Requires Codecov token and setup. Ensure coverage is generated by Vitest.
-    #   uses: codecov/codecov-action@v4
-    #   with:
-    #     token: ${{ secrets.CODECOV_TOKEN }}
-    #     files: ./coverage/clover.xml # Adjust path to your coverage report
-    #     fail_ci_if_error: true # Fail the workflow if Codecov upload fails
+  # ----------------------------------------
+  # STAGE 3: CLIENT (REACT NATIVE) PIPELINE
+  # ----------------------------------------
+  client_test_build:
+    name: "📱 Client (React Native) Test & Bundle Check"
+    runs-on: ubuntu-latest
+    needs: [code_quality]
+    defaults:
+      run:
+        working-directory: client/
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install Client Dependencies
+        run: npm ci
+
+      - name: Run Client Unit Tests
+        # Includes functional component tests
+        run: npm test
+
+      - name: Check Client Bundle Readiness (Web/Expo Build)
+        # Ensures React Native code is correctly configured for bundling/transpilation
+        run: npm run build:web # Example script for basic bundling validation
