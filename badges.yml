@@ -1,28 +1,30 @@
 build_status:
-  workflow: CI
-  image: https://github.com/chirag127/Artifex-AI-Sketch-to-Art-CrossPlatform-App/actions/workflows/ci.yml/badge.svg
-coverage:
-  status:
-    codecov: true
+  enabled: true
+  provider: github_actions
+  workflow_name: CI
+  branches:
+    - main
+code_coverage:
+  enabled: true
+  provider: codecov
+  branch: main
 tech_stack:
-  - name: TypeScript
-    logo: typescript
-    url: https://www.typescriptlang.org/
-  - name: React Native
-    logo: react
-    url: https://reactnative.dev/
-  - name: Express.js
-    logo: nodejs
-    url: https://expressjs.com/
-  - name: Gemini Pro Vision
-    logo: google
-    url: https://ai.google.dev/models/gemini
-linter:
-  status: true
+  enabled: true
+  title: "Tech Stack"
+  icon: "https://img.shields.io/badge/Stack-TS%2CRN%2CNodeJS-blue?style=flat-square"
+  link: "https://github.com/chirag127/CogniSketch-AI-Art-Generator-Mobile-Web-App"
+lint_format:
+  enabled: true
+  title: "Lint/Format"
+  provider: biome
+  branch: main
 license:
-  text: CC BY-NC 4.0
-  logo: apache
-  url: http://choosealicense.com/licenses/cc-by-nc-4.0/
+  enabled: true
+  provider: "cc-by-nc-4.0"
+  link: "https://github.com/chirag127/CogniSketch-AI-Art-Generator-Mobile-Web-App/blob/main/LICENSE"
 stars:
-  logo: github
-  url: https://github.com/chirag127/Artifex-AI-Sketch-to-Art-CrossPlatform-App
+  enabled: true
+  provider: github_stars
+  name: "chirag127"
+  repo: "CogniSketch-AI-Art-Generator-Mobile-Web-App"
+  link: "https://github.com/chirag127/CogniSketch-AI-Art-Generator-Mobile-Web-App"
